@@ -6,8 +6,16 @@ metadata:
 spec:
   clusterName: staging-cluster-gitops
   description: "Staging cluster managed via GitOps"
-  kubeconfig: ""
-  tags:
-    - gitops
-    - staging
-    - test
+  displayName: "Staging Cluster (GitOps)"
+  environment: staging
+  provider: on-premise
+  region: local
+  backendApiEndpoint: "http://backend-api-staging.example.com:8080"
+  authentication:
+    method: api-key
+  capabilities:
+    rbacManager: true
+    envManager: true
+    supportedFeatures:
+      - eventsService
+      - rbacDriftDetection

@@ -1,18 +1,20 @@
 apiVersion: ops-box.io/v1
-kind: OpsBoxRole
+kind: OBRole
 metadata:
   name: gitops-viewer
   namespace: ops-box
 spec:
-  roleName: gitops-viewer
   description: "Read-only role created via GitOps"
   permissions:
-    - resource: "pods"
-      verbs: ["get", "list", "watch"]
-      clusters: ["*"]
-    - resource: "services"
-      verbs: ["get", "list", "watch"]
-      clusters: ["*"]
-    - resource: "deployments"
-      verbs: ["get", "list", "watch"]
-      clusters: ["*"]
+    - feature: view_rbac_definitions
+      target: all
+      allowed: true
+    - feature: view_env_definitions
+      target: all
+      allowed: true
+    - feature: view_remote_clusters
+      target: all
+      allowed: true
+    - feature: view_events
+      target: all
+      allowed: true

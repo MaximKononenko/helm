@@ -6,8 +6,16 @@ metadata:
 spec:
   clusterName: dev-cluster-gitops
   description: "Development cluster managed via GitOps"
-  kubeconfig: "" # Would be populated from secret in real scenario
-  tags:
-    - gitops
-    - development
-    - test
+  displayName: "Dev Cluster (GitOps)"
+  environment: development
+  provider: on-premise
+  region: local
+  backendApiEndpoint: "http://backend-api-dev.example.com:8080"
+  authentication:
+    method: api-key
+  capabilities:
+    rbacManager: true
+    envManager: true
+    supportedFeatures:
+      - eventsService
+      - rbacDriftDetection

@@ -1,10 +1,14 @@
 apiVersion: ops-box.io/v1
-kind: OpsBoxSubject
+kind: OBSubject
 metadata:
   name: gitops-team
   namespace: ops-box
 spec:
-  subjectName: gitops-team
-  subjectType: group
-  description: "GitOps team group"
-  email: "gitops-team@example.com"
+  type: internal
+  identifiers:
+    - gitops-team@example.com
+    - gitops-team
+  groups:
+    - developers
+  roles:
+    - gitops-viewer
