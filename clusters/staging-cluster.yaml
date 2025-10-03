@@ -13,6 +13,8 @@ spec:
   backendApiEndpoint: "http://backend-api-staging.example.com:8080"
   authentication:
     method: api-key
+    apiKeyRef:
+      redisKey: "auth:cluster-api-key:staging-cluster-gitops:placeholder"
   capabilities:
     rbacManager: true
     envManager: true

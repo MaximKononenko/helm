@@ -7,12 +7,14 @@ spec:
   clusterName: dev-cluster-gitops
   description: "Development cluster managed via GitOps"
   displayName: "Dev Cluster (GitOps)"
-  environment: development
+  environment: dev
   provider: on-premise
   region: local
   backendApiEndpoint: "http://backend-api-dev.example.com:8080"
   authentication:
     method: api-key
+    apiKeyRef:
+      redisKey: "auth:cluster-api-key:dev-cluster-gitops:placeholder"
   capabilities:
     rbacManager: true
     envManager: true
