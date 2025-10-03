@@ -1,0 +1,13 @@
+apiVersion: ops-box.io/v1
+kind: RemoteCluster
+metadata:
+  name: staging-cluster-gitops
+  namespace: ops-box
+spec:
+  clusterName: staging-cluster-gitops
+  description: "Staging cluster managed via GitOps"
+  kubeconfig: ""
+  tags:
+    - gitops
+    - staging
+    - test

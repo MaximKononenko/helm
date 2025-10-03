@@ -1,0 +1,15 @@
+apiVersion: ops-box.io/v1
+kind: OpsBoxRole
+metadata:
+  name: gitops-developer
+  namespace: ops-box
+spec:
+  roleName: gitops-developer
+  description: "Developer role created via GitOps"
+  permissions:
+    - resource: "pods"
+      verbs: ["get", "list", "watch"]
+      clusters: ["*"]
+    - resource: "deployments"
+      verbs: ["get", "list", "watch", "create", "update"]
+      clusters: ["dev-cluster-gitops"]

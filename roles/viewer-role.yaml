@@ -1,0 +1,18 @@
+apiVersion: ops-box.io/v1
+kind: OpsBoxRole
+metadata:
+  name: gitops-viewer
+  namespace: ops-box
+spec:
+  roleName: gitops-viewer
+  description: "Read-only role created via GitOps"
+  permissions:
+    - resource: "pods"
+      verbs: ["get", "list", "watch"]
+      clusters: ["*"]
+    - resource: "services"
+      verbs: ["get", "list", "watch"]
+      clusters: ["*"]
+    - resource: "deployments"
+      verbs: ["get", "list", "watch"]
+      clusters: ["*"]

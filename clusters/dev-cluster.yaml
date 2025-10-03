@@ -1,0 +1,13 @@
+apiVersion: ops-box.io/v1
+kind: RemoteCluster
+metadata:
+  name: dev-cluster-gitops
+  namespace: ops-box
+spec:
+  clusterName: dev-cluster-gitops
+  description: "Development cluster managed via GitOps"
+  kubeconfig: "" # Would be populated from secret in real scenario
+  tags:
+    - gitops
+    - development
+    - test

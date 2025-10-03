@@ -1,0 +1,10 @@
+apiVersion: ops-box.io/v1
+kind: OpsBoxSubject
+metadata:
+  name: gitops-team
+  namespace: ops-box
+spec:
+  subjectName: gitops-team
+  subjectType: group
+  description: "GitOps team group"
+  email: "gitops-team@example.com"
