@@ -18,6 +18,8 @@ spec:
   capabilities:
     rbacManager: true
     envManager: true
+    cronManager: true
     supportedFeatures:
       - eventsService
       - rbacDriftDetection
+      - cronDriftDetection

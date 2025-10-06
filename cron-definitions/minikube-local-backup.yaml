@@ -1,0 +1,38 @@
+---
+apiVersion: ops-box.io/v1
+kind: CronDefinition
+metadata:
+  name: minikube-backup
+  namespace: ops-box
+spec:
+  jobType: bash
+  schedule: "*/15 * * * *"  # Every 15 minutes (for testing)
+  namespace: default
+  
+  bashJob:
+    image: bash:latest
+    script: |
+      #!/bin/bash
+      echo "=== Minikube Local Backup Job ==="
+      echo "Timestamp: $(date)"
+      echo "Running backup simulation..."
+      sleep 3
+      echo "Backup completed successfully!"
+  
+  jobConfig:
+    successfulJobsHistoryLimit: 2
+    failedJobsHistoryLimit: 1
+    concurrencyPolicy: Forbid
+    backoffLimit: 1
+    activeDeadlineSeconds: 300
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+      limits:
+        cpu: "200m"
+        memory: "128Mi"
+  
+  reconciliation:
+    selfHeal: true
+    prune: true
