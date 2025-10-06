@@ -1,14 +1,12 @@
----
 apiVersion: ops-box.io/v1
 kind: CronDefinition
 metadata:
-  name: minikube-backup
+  name: minikube-local-backup
   namespace: ops-box
 spec:
   jobType: bash
-  schedule: "*/15 * * * *"  # Every 15 minutes (for testing)
+  schedule: "*/15 * * * *" # Every 15 minutes (for testing)
   namespace: default
-  
   bashJob:
     image: bash:latest
     script: |
@@ -18,7 +16,6 @@ spec:
       echo "Running backup simulation..."
       sleep 3
       echo "Backup completed successfully!"
-  
   jobConfig:
     successfulJobsHistoryLimit: 2
     failedJobsHistoryLimit: 1
@@ -32,7 +29,6 @@ spec:
       limits:
         cpu: "200m"
         memory: "128Mi"
-  
   reconciliation:
     selfHeal: true
     prune: true
