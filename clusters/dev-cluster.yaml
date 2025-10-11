@@ -1,0 +1,25 @@
+apiVersion: ops-box.io/v1
+kind: RemoteCluster
+metadata:
+  name: dev-cluster-gitops
+  namespace: ops-box
+spec:
+  clusterName: dev-cluster-gitops
+  description: "Development cluster managed via GitOps"
+  displayName: "Dev Cluster (GitOps)"
+  environment: dev
+  provider: on-premise
+  region: local
+  backendApiEndpoint: "http://backend-api-dev.example.com:8080"
+  authentication:
+    method: api-key
+    apiKeyRef:
+      redisKey: "auth:cluster-api-key:dev-cluster-gitops:placeholder"
+  capabilities:
+    rbacManager: true
+    envManager: true
+    cronManager: true
+    supportedFeatures:
+      - eventsService
+      - rbacDriftDetection
+      - cronDriftDetection

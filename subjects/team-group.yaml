@@ -1,0 +1,14 @@
+apiVersion: ops-box.io/v1
+kind: OBSubject
+metadata:
+  name: gitops-team
+  namespace: ops-box
+spec:
+  type: internal
+  identifiers:
+    - gitops-team@example.com
+    - gitops-team
+  groups:
+    - developers
+  roles:
+    - gitops-viewer

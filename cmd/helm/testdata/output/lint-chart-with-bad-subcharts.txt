@@ -1,5 +1,0 @@
-==> Linting testdata/testcharts/chart-with-bad-subcharts
-[INFO] Chart.yaml: icon is recommended
-[WARNING] templates/: directory not found
-
-1 chart(s) linted, 0 chart(s) failed

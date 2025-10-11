@@ -1,0 +1,23 @@
+apiVersion: ops-box.io/v1
+kind: RemoteCluster
+metadata:
+  name: staging-cluster-gitops
+  namespace: ops-box
+spec:
+  clusterName: staging-cluster-gitops
+  description: "Staging cluster managed via GitOps"
+  displayName: "Staging Cluster (GitOps)"
+  environment: staging
+  provider: on-premise
+  region: local
+  backendApiEndpoint: "http://backend-api-staging.example.com:8080"
+  authentication:
+    method: api-key
+    apiKeyRef:
+      redisKey: "auth:cluster-api-key:staging-cluster-gitops:placeholder"
+  capabilities:
+    rbacManager: true
+    envManager: true
+    supportedFeatures:
+      - eventsService
+      - rbacDriftDetection

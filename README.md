@@ -1,73 +1,106 @@
-# Helm
+# K8s-Ops-Box GitOps Test Repository
 
-[![CircleCI](https://circleci.com/gh/helm/helm.svg?style=shield)](https://circleci.com/gh/helm/helm)
-[![Go Report Card](https://goreportcard.com/badge/github.com/helm/helm)](https://goreportcard.com/report/github.com/helm/helm)
-[![GoDoc](https://img.shields.io/static/v1?label=godoc&message=reference&color=blue)](https://pkg.go.dev/helm.sh/helm/v3)
-[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/3131/badge)](https://bestpractices.coreinfrastructure.org/projects/3131)
+This repository contains sample k8s-ops-box Custom Resources for testing GitOps functionality.
 
-Helm is a tool for managing Charts. Charts are packages of pre-configured Kubernetes resources.
+## Structure
 
-Use Helm to:
+```
+.
+├── clusters/              # RemoteCluster CRs
+│   ├── dev-cluster.yaml
+│   └── staging-cluster.yaml
+├── roles/                 # OpsBoxRole CRs
+│   ├── developer-role.yaml
+│   └── viewer-role.yaml
+├── subjects/              # OpsBoxSubject CRs
+│   └── team-group.yaml
+├── rbac-definitions/      # RBACDefinition CRs (with targetCluster)
+│   ├── dev-rbac.yaml
+│   ├── minikube-local-rbac.yaml
+│   └── staging-rbac.yaml
+└── cron-definitions/      # CronDefinition CRs (with targetCluster)
+    ├── minikube-backup.yaml
+    └── python-health-check.yaml
+```
 
-- Find and use [popular software packaged as Helm Charts](https://hub.helm.sh) to run in Kubernetes
-- Share your own applications as Helm Charts
-- Create reproducible builds of your Kubernetes applications
-- Intelligently manage your Kubernetes manifest files
-- Manage releases of Helm packages
+## Resources
 
-## Helm in a Handbasket
+### Clusters (2)
+- `dev-cluster-gitops` - Development cluster
+- `staging-cluster-gitops` - Staging cluster
 
-Helm is a tool that streamlines installing and managing Kubernetes applications.
-Think of it like apt/yum/homebrew for Kubernetes.
+### Roles (2)
+- `gitops-developer` - Developer role with create/update on dev cluster
+- `gitops-viewer` - Read-only role across all clusters
 
-- Helm renders your templates and communicates with the Kubernetes API
-- Helm runs on your laptop, CI/CD, or wherever you want it to run.
-- Charts are Helm packages that contain at least two things:
-  - A description of the package (`Chart.yaml`)
-  - One or more templates, which contain Kubernetes manifest files
-- Charts can be stored on disk, or fetched from remote chart repositories
-  (like Debian or RedHat packages)
+### Subjects (1)
+- `gitops-team` - Team group
 
-## Install
+### RBAC Definitions (3)
+- `dev-rbac` - RBAC configuration for dev cluster
+- `minikube-local-rbac` - RBAC configuration for local minikube
+- `staging-rbac` - RBAC configuration for staging cluster
 
+### Cron Definitions (2)
+- `minikube-backup` - Bash job that runs every 15 minutes (backup simulation)
+- `python-health-check` - Python health check job every 10 minutes
 
-Binary downloads of the Helm client can be found on [the Releases page](https://github.com/helm/helm/releases/latest).
+## Usage
 
-Unpack the `helm` binary and add it to your PATH and you are good to go!
+Create a GitDefinition CR pointing to this repository:
 
-If you want to use a package manager:
+```yaml
+apiVersion: ops-box.io/v1
+kind: GitDefinition
+metadata:
+  name: test-gitops-repo
+  namespace: ops-box
+spec:
+  repository:
+    url: <path-to-this-repo>
+  branches:
+    - name: master
+  paths:
+    - path: "clusters/*.yaml"
+      kind: RemoteCluster
+    - path: "roles/*.yaml"
+      kind: OpsBoxRole
+    - path: "subjects/*.yaml"
+      kind: OpsBoxSubject
+    - path: "rbac-definitions/*.yaml"
+      kind: RBACDefinition
+      targetCluster: "minikube-local"  # Required for RBACDefinition
+    - path: "cron-definitions/*.yaml"
+      kind: CronDefinition
+      targetCluster: "minikube-local"  # Required for CronDefinition
+  pollIntervalSeconds: 300
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: true
+      selfHeal: true
+```
 
-- [Homebrew](https://brew.sh/) users can use `brew install helm`.
-- [Chocolatey](https://chocolatey.org/) users can use `choco install kubernetes-helm`.
-- [Scoop](https://scoop.sh/) users can use `scoop install helm`.
-- [GoFish](https://gofi.sh/) users can use `gofish install helm`.
-- [Snapcraft](https://snapcraft.io/) users can use `snap install helm --classic`
+The CC-Operator will:
+1. Clone this repository
+2. Parse YAML files matching the patterns
+3. Extract `targetCluster` from path config for RBACDefinition/CronDefinition
+4. Apply CRs via BFF-API to the specified cluster
+5. Publish sync events
+6. Auto-prune orphaned resources (if enabled)
+7. Auto-heal drifted resources (if enabled)
 
-To rapidly get Helm up and running, start with the [Quick Start Guide](https://docs.helm.sh/using_helm/#quickstart-guide).
+## Important Notes
 
-See the [installation guide](https://helm.sh/docs/intro/install/) for more options,
-including installing pre-releases.
+### RBACDefinition & CronDefinition
+- These CRs **require** `targetCluster` in the GitDefinition path configuration
+- The `targetCluster` field tells the git_handler which cluster to deploy to
+- Example: `targetCluster: "minikube-local"` → deployed to `/api/v1/cron-definitions/minikube-local/{name}`
 
-## Docs
-
-Get started with the [Quick Start guide](https://helm.sh/docs/intro/quickstart/) or plunge into the [complete documentation](https://helm.sh/docs)
-
-## Roadmap
-
-The [Helm roadmap uses Github milestones](https://github.com/helm/helm/milestones) to track the progress of the project.
-
-## Community, discussion, contribution, and support
-
-You can reach the Helm community and developers via the following channels:
-
-- [Kubernetes Slack](https://kubernetes.slack.com):
-  - [#helm-users](https://kubernetes.slack.com/messages/helm-users)
-  - [#helm-dev](https://kubernetes.slack.com/messages/helm-dev)
-  - [#charts](https://kubernetes.slack.com/messages/charts)
-- Mailing List:
-  - [Helm Mailing List](https://lists.cncf.io/g/cncf-helm)
-- Developer Call: Thursdays at 9:30-10:00 Pacific. [https://zoom.us/j/696660622](https://zoom.us/j/696660622)
-
-### Code of conduct
-
-Participation in the Helm community is governed by the [Code of Conduct](code-of-conduct.md).
+### Git-Ops Annotations
+All synced resources will have these annotations:
+- `ops-box.io/git-managed: "true"` - Marks resource as Git-managed
+- `ops-box.io/git-source: <git-def-name>` - Source GitDefinition name
+- `ops-box.io/git-branch: <branch>` - Git branch
+- `ops-box.io/git-path: <path>` - Relative path in repo
+- `ops-box.io/last-synced: <timestamp>` - Last sync timestamp

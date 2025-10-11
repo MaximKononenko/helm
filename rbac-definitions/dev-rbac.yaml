@@ -1,0 +1,30 @@
+apiVersion: ops-box.io/v1
+kind: RBACDefinition
+metadata:
+  name: dev-rbac
+  namespace: ops-box
+spec:
+  targetNamespace: "default"
+  static: true
+  deployedBy: "gitops-sync"
+  # Custom roles for development environment
+  customRoles:
+    - name: dev-pod-viewer
+      clusterScope: false
+      targetNamespaces: ["default", "development"]
+      rules:
+        - apiGroups: [""]
+          resources: ["pods", "pods/log"]
+          verbs: ["get", "list", "watch"]
+        - apiGroups: [""]
+          resources: ["services"]
+          verbs: ["get", "list"]
+  # RBAC bindings
+  rbacBindings:
+    - name: dev-team-bindings
+      subjects:
+        - kind: Group
+          name: dev-team
+      roleBindings:
+        - role: dev-pod-viewer
+          targetNamespaces: ["default", "development"]

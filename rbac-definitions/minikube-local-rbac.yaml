@@ -1,0 +1,33 @@
+---
+apiVersion: ops-box.io/v1
+kind: RBACDefinition
+metadata:
+  name: minikube-local-rbac
+  namespace: ops-box
+spec:
+  targetNamespace: "default"
+  static: true
+  deployedBy: "gitops-sync"
+  
+  # Custom roles for local development
+  customRoles:
+    - name: local-dev-viewer
+      clusterScope: false
+      targetNamespaces: ["default", "ops-box"]
+      rules:
+        - apiGroups: [""]
+          resources: ["pods", "pods/log", "services"]
+          verbs: ["get", "list", "watch"]
+        - apiGroups: ["apps"]
+          resources: ["deployments", "replicasets"]
+          verbs: ["get", "list", "watch"]
+  
+  # RBAC bindings
+  rbacBindings:
+    - name: local-devs
+      subjects:
+        - kind: Group
+          name: local-developers
+      roleBindings:
+        - role: local-dev-viewer
+          targetNamespaces: ["default", "ops-box"]
