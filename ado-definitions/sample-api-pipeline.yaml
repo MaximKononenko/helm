@@ -4,80 +4,76 @@ metadata:
   name: sample-api-pipeline
   namespace: ops-box
 spec:
-  # Application configuration
-  applicationName: "SampleAPI"
-  repositoryUrl: "https://github.com/example/sample-api"
   # Draft mode - set to false to enable export
-  draft: false
+  draft: true
+  
+  # Source repository configuration
+  sourceRepository:
+    url: "https://github.com/example/sample-api"
+    branch: "main"
+  
   # Templates source configuration
   templatesSource:
     gitDefinitionName: "shared-pipeline-templates"
     basePath: "azure-pipelines"
-  # CI Configuration
-  ciConfig:
-    build:
-      enabled: true
-      pool:
-        vmImage: "ubuntu-latest"
-      trigger:
-        branches:
+  
+  # Pipeline definition (Azure Pipelines YAML structure)
+  pipelineDefinition:
+    name: "SampleAPI-CI"
+    pool:
+      vmImage: "ubuntu-latest"
+    trigger:
+      branches:
+        include:
           - main
           - develop
-      variables:
-        - name: "buildConfiguration"
-          value: "Release"
-      steps:
-        - template: "build-dotnet.yml"
-          parameters:
-            projectPath: "src/SampleAPI/SampleAPI.csproj"
-    test:
-      enabled: true
-      stages:
-        - name: "unit-tests"
-          template: "test-unit.yml"
-          parameters:
-            testProjects: "**/*Tests.csproj"
-        - name: "integration-tests"
-          template: "test-integration.yml"
-          parameters:
-            testProjects: "**/*IntegrationTests.csproj"
-  # CD Configuration
+    stages:
+      - stage: "Build"
+        displayName: "Build Stage"
+        jobs:
+          - job: "BuildJob"
+            displayName: "Build Application"
+            steps:
+              - task: "Bash@3"
+                displayName: "Build .NET Application"
+                inputs:
+                  targetType: "inline"
+                  script: |
+                    echo "Building application..."
+                    dotnet restore
+                    dotnet build --configuration Release
+              - task: "Bash@3"
+                displayName: "Run Unit Tests"
+                inputs:
+                  targetType: "inline"
+                  script: |
+                    echo "Running tests..."
+                    dotnet test --configuration Release --no-build
+  
+  # CD Configuration (optional deployment profiles)
   cdConfig:
     profiles:
       - name: "dev"
+        environment: "dev"
         targetCluster: "aks-dev-eastus"
         namespace: "sample-api-dev"
-        helmChart: "sample-api"
-        valuesFile: "values-dev.yaml"
         approvalRequired: false
+      
       - name: "staging"
+        environment: "staging"
         targetCluster: "aks-np-eastus"
         namespace: "sample-api-staging"
-        helmChart: "sample-api"
-        valuesFile: "values-staging.yaml"
         approvalRequired: true
-        approvers:
-          - "dev-team@example.com"
+      
       - name: "production"
+        environment: "production"
         targetCluster: "aks-prd-eastus2"
         namespace: "sample-api"
-        helmChart: "sample-api"
-        valuesFile: "values-production.yaml"
         approvalRequired: true
-        approvers:
-          - "platform-team@example.com"
-          - "security-team@example.com"
+  
   # Output destinations for generated artifacts
   outputs:
     pipeline:
       gitDefinitionName: "source-code-repo"
-      path: "devops/azure-pipeline.yml"
-      branch: "test-k8s-ops-box-resources"
-    ciConfig:
-      gitDefinitionName: "source-code-repo"
-      path: "devops/ci-config.json"
-      branch: "test-k8s-ops-box-resources"
-    deployProfiles:
-      gitDefinitionName: "source-code-repo"
-      path: "devops/deploy-profiles.json"
+      path: "devops/sample-api-pipeline.yml"
       branch: "test-k8s-ops-box-resources"
