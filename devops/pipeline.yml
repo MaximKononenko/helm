@@ -1,0 +1,26 @@
+name: TestApp-CI
+pool:
+  vmImage: ubuntu-latest
+trigger:
+  branches:
+    include:
+    - main
+    - develop
+stages:
+- displayName: Build Stage
+  jobs:
+  - displayName: Build Application
+    job: BuildJob
+    steps:
+    - displayName: Run Build
+      inputs:
+        script: 'echo "Building application..."
+
+          npm install
+
+          npm run build
+
+          '
+        targetType: inline
+      task: Bash@3
+  stage: Build
