@@ -47,6 +47,10 @@ spec:
         # GitDefinition CRs (self-sync bootstrap)
         - path: "git-definitions/*.yaml"
           kind: GitDefinition
+        
+        # AdoPipelineDefinition CRs
+        - path: "ado-definitions/*.yaml"
+          kind: AdoPipelineDefinition
   
   pollIntervalSeconds: 600  # 10 minutes
   
