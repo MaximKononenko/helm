@@ -6,17 +6,14 @@ metadata:
 spec:
   # Draft mode - set to false to enable export
   draft: true
-  
   # Source repository configuration
   sourceRepository:
     url: "https://github.com/example/sample-api"
-    branch: "main"
-  
+    branch: "develop"  # Changed from "main" to test UPDATE
   # Templates source configuration
   templatesSource:
     gitDefinitionName: "shared-pipeline-templates"
     basePath: "azure-pipelines"
-  
   # Pipeline definition (Azure Pipelines YAML structure)
   pipelineDefinition:
     name: "SampleAPI-CI"
@@ -49,7 +46,6 @@ spec:
                   script: |
                     echo "Running tests..."
                     dotnet test --configuration Release --no-build
-  
   # CD Configuration (optional deployment profiles)
   cdConfig:
     profiles:
@@ -58,19 +54,16 @@ spec:
         targetCluster: "aks-dev-eastus"
         namespace: "sample-api-dev"
         approvalRequired: false
-      
       - name: "staging"
         environment: "staging"
         targetCluster: "aks-np-eastus"
         namespace: "sample-api-staging"
         approvalRequired: true
-      
       - name: "production"
         environment: "production"
         targetCluster: "aks-prd-eastus2"
         namespace: "sample-api"
         approvalRequired: true
-  
   # Output destinations for generated artifacts
   outputs:
     pipeline:
