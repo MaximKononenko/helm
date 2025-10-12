@@ -1,0 +1,83 @@
+apiVersion: ops-box.io/v1
+kind: AdoPipelineDefinition
+metadata:
+  name: sample-api-pipeline
+  namespace: ops-box
+spec:
+  # Application configuration
+  applicationName: "SampleAPI"
+  repositoryUrl: "https://github.com/example/sample-api"
+  # Draft mode - set to false to enable export
+  draft: false
+  # Templates source configuration
+  templatesSource:
+    gitDefinitionName: "shared-pipeline-templates"
+    basePath: "azure-pipelines"
+  # CI Configuration
+  ciConfig:
+    build:
+      enabled: true
+      pool:
+        vmImage: "ubuntu-latest"
+      trigger:
+        branches:
+          - main
+          - develop
+      variables:
+        - name: "buildConfiguration"
+          value: "Release"
+      steps:
+        - template: "build-dotnet.yml"
+          parameters:
+            projectPath: "src/SampleAPI/SampleAPI.csproj"
+    test:
+      enabled: true
+      stages:
+        - name: "unit-tests"
+          template: "test-unit.yml"
+          parameters:
+            testProjects: "**/*Tests.csproj"
+        - name: "integration-tests"
+          template: "test-integration.yml"
+          parameters:
+            testProjects: "**/*IntegrationTests.csproj"
+  # CD Configuration
+  cdConfig:
+    profiles:
+      - name: "dev"
+        targetCluster: "aks-dev-eastus"
+        namespace: "sample-api-dev"
+        helmChart: "sample-api"
+        valuesFile: "values-dev.yaml"
+        approvalRequired: false
+      - name: "staging"
+        targetCluster: "aks-np-eastus"
+        namespace: "sample-api-staging"
+        helmChart: "sample-api"
+        valuesFile: "values-staging.yaml"
+        approvalRequired: true
+        approvers:
+          - "dev-team@example.com"
+      - name: "production"
+        targetCluster: "aks-prd-eastus2"
+        namespace: "sample-api"
+        helmChart: "sample-api"
+        valuesFile: "values-production.yaml"
+        approvalRequired: true
+        approvers:
+          - "platform-team@example.com"
+          - "security-team@example.com"
+  # Output destinations for generated artifacts
+  outputs:
+    pipeline:
+      gitDefinitionName: "source-code-repo"
+      path: "devops/azure-pipeline.yml"
+      branch: "test-k8s-ops-box-resources"
+    ciConfig:
+      gitDefinitionName: "source-code-repo"
+      path: "devops/ci-config.json"
+      branch: "test-k8s-ops-box-resources"
+    deployProfiles:
+      gitDefinitionName: "source-code-repo"
+      path: "devops/deploy-profiles.json"
+      branch: "test-k8s-ops-box-resources"

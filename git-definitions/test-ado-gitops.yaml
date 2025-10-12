@@ -1,0 +1,28 @@
+apiVersion: ops-box.io/v1
+kind: GitDefinition
+metadata:
+  name: ado-definitions-repo
+  namespace: ops-box
+spec:
+  repository:
+    url: https://github.com/MaximKononenko/helm.git
+    defaultBranch: test-k8s-ops-box-resources
+  purposes:
+    cr:
+      enabled: true
+      folderPath: "ado-definitions"
+      paths:
+        - path: "ado-definitions/*.yaml"
+          kind: AdoPipelineDefinition
+      pollIntervalSeconds: 180
+      syncPolicy:
+        automated:
+          enabled: true
+          prune: true
+          selfHeal: true
+    templates:
+      enabled: false
+    output:
+      enabled: false
+    source:
+      enabled: false
