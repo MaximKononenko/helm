@@ -1,0 +1,3 @@
+stage: Build
+displayName: Build & Push Docker image
+jobs: []

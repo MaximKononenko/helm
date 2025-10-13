@@ -1,0 +1,14 @@
+job: SonarCloudScan
+displayName: Run SonarCloud Scan
+continueOnError: false
+container:
+  image: catalina.azurecr.io/sonar-scanner:5.0.1
+  endpoint: Catalina ACR
+  mapDockerSocket: true
+steps:
+- checkout: self
+- script: |
+    # Generate coverage report if applicable
+    # npx jest --coverage
+    sonar-scanner -Dsonar.branch.name=$(Build.SourceBranchName) -Dsonar.token=$(global.sonarToken)
+  displayName: Run SonarCloud Scanner
