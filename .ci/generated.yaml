@@ -174,7 +174,7 @@ stages:
       applicationName: ${{ variables.applicationName }}
       deployProfileList:
       - eui-us-dev
-      - eui-us-uat1
+      - eui-us-uat
       - eui-eu-uat
       - eui-us-prod
       - eui-eu-prod
