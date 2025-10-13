@@ -1,0 +1,233 @@
+name: Aurelia/Node.js - Default CI
+pool:
+  vmImage: ubuntu-latest
+trigger:
+  branches:
+    include:
+    - main
+    - develop
+stages:
+- stage: Build
+  displayName: CI
+  jobs:
+  - job: jobBuild
+    displayName: Build Job
+    timeoutInMinutes: 0
+    continueOnError: false
+    container:
+      image: catalina.azurecr.io/docker/eui-node
+      endpoint: Catalina ACR
+      mapDockerSocket: true
+    steps:
+    - task: Bash@3
+      name: systemDiagnosticsBefore
+      displayName: System diagnostics before job runs
+      inputs:
+        targetType: inline
+        script: 'echo "Output of docker system df"
+
+          sudo docker system df
+
+          df -h
+
+          '
+    - checkout: applicationRepository
+      name: checkoutApplicationRepository
+      displayName: Checkout $(applicationName)
+      enabled: true
+      persistCredentials: true
+      fetchDepth: 250
+    - task: Bash@3
+      displayName: Display all predefined variables
+      inputs:
+        targetType: inline
+        script: env | sort
+    - displayName: Aurelia build
+      enabled: true
+      inputs:
+        script: 'yarn install
+
+          ./node_modules/.bin/au build --env prod'
+        targetType: inline
+      task: Bash@3
+    - displayName: Package artifacts
+      enabled: true
+      inputs:
+        script: 'cd ./dist
+
+          tar -cpzf artifacts.tgz .
+
+          echo ''Artifacts packaged successfully.'''
+        targetType: inline
+      task: Bash@3
+    - displayName: Publish Artifacts
+      inputs:
+        artifactName: packaged-artifacts
+        pathToPublish: ./dist/artifacts.tgz
+      task: PublishBuildArtifacts@1
+    - task: Bash@3
+      displayName: Set Output Variables
+      inputs:
+        targetType: inline
+        script: 'buildTag="$(echo $(basename $(Build.SourceBranch)).$(build.buildId)
+          | tr ''[:upper:]'' ''[:lower:]'')"
+
+          echo "##vso[task.setvariable variable=buildTag;isOutput=true]$buildTag"
+
+
+          # Initial debug messages
+
+
+          echo "Set variables (initial state)"
+
+          echo "buildTag: $buildTag"'
+      name: outputVars
+  - ${{ each service in parameters.services }}:
+    - dependsOn:
+      - jobBuild
+      displayName: Kaniko Build & Push - ${{ service }}
+      job: kaniko_${{ replace(service, '-', '_') }}
+      steps:
+      - displayName: Download Artifacts
+        inputs:
+          artifactName: packaged-artifacts
+          targetPath: $(Pipeline.Workspace)/s/dist
+        task: DownloadPipelineArtifact@2
+      - displayName: Unpacking artifacts
+        enabled: true
+        inputs:
+          script: 'cd $(Pipeline.Workspace)/s/dist
+
+            tar -xpzf artifacts.tgz .
+
+            ls -la'
+          targetType: inline
+        task: Bash@3
+      - task: Bash@3
+        displayName: ${{ service }} | Set Build Variables
+        inputs:
+          targetType: inline
+          script: "acrRepoName=\"$(projectName)\"\necho \"##vso[task.setvariable variable=acrRepoName;isOutput=false]$acrRepoName\"\
+            \nbuildArg=\"ARTIFACTS_PATH=dist\"\necho \"##vso[task.setvariable variable=buildArg;isOutput=false]$buildArg\"\
+            \ncontainerRegistryFullName=\"catalina.azurecr.io\"\necho \"##vso[task.setvariable\
+            \ variable=containerRegistryFullName;isOutput=false]$containerRegistryFullName\"\
+            \ncontext=\"$(context)\"\necho \"##vso[task.setvariable variable=context;isOutput=false]$context\"\
+            \ndockerFile=\"devops/Dockerfile\"\necho \"##vso[task.setvariable variable=dockerFile;isOutput=false]$dockerFile\"\
+            \nimageTag=\"catalina.azurecr.io/$(projectName)/${{service}}:$(echo $(basename\
+            \ $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')\"\
+            \necho \"##vso[task.setvariable variable=imageTag;isOutput=false]$imageTag\"\
+            \nservice=\"${{service}}\"\necho \"##vso[task.setvariable variable=service;isOutput=false]$service\"\
+            \n\n# Injected script\nif [ ${{ service }} == \"eui\" ]; then\n  buildArg=ARTIFACTS_PATH=dist\n\
+            \  echo \"##vso[task.setvariable variable=buildArg]$buildArg\"\nelif [\
+            \ ${{ service }} == \"eui-kv-config-expander\" ]; then\n  dockerFile=\"\
+            devops/kv-config-expander.Dockerfile\"\n  buildArg=\"REGISTRY=$containerRegistryFullName\"\
+            \n  echo \"##vso[task.setvariable variable=dockerFile]$dockerFile\"\n\
+            \  echo \"##vso[task.setvariable variable=buildArg]$buildArg\"\nfi\n\n\
+            # Initial debug messages\n\necho \"Set variables (initial state)\"\necho\
+            \ \"acrRepoName: $acrRepoName\"\necho \"buildArg: $buildArg\"\necho \"\
+            containerRegistryFullName: $containerRegistryFullName\"\necho \"context:\
+            \ $context\"\necho \"dockerFile: $dockerFile\"\necho \"imageTag: $imageTag\"\
+            \necho \"service: $service\""
+      - task: Bash@3
+        displayName: ${{ service }} | Create build-info.json
+        inputs:
+          targetType: inline
+          script: "BUILD_URL=$SYSTEM_TEAMFOUNDATIONCOLLECTIONURI/$SYSTEM_TEAMPROJECT/_build/results?buildId=$BUILD_BUILDID\n\
+            BUILD_TIME=$(date '+%Y-%m-%dT%H:%M:%SZ')\njq --arg buildtime \"$BUILD_TIME\"\
+            \ \\\n   --arg buildurl \"$BUILD_URL\" \\\n   --arg machinename \"$AGENT_MACHINENAME\"\
+            \ \\\n   --arg pipestarttime \"$SYSTEM_PIPELINESTARTTIME\" \\\n   --arg\
+            \ commitmsg \"$BUILD_SOURCEVERSIONMESSAGE\"  \\\n   --arg commitid \"\
+            $BUILD_SOURCEVERSION\" \\\n   --arg commitauthor \"$BUILD_SOURCEVERSIONAUTHOR\"\
+            \ \\\n   --arg branch \"$BUILD_SOURCEBRANCHNAME\" \\\n   --arg appname\
+            \ \"$APPLICATIONNAME\" '.build.time |= $buildtime | .release.build |=\
+            \ $buildurl | .git.build.host |= $machinename | .git.build.time |= $pipestarttime\
+            \ | .git.commit.message.full |= $commitmsg | .git.commit.id |= $commitid\
+            \ | .git.commit.user.name |= $commitauthor | .git.branch |= $branch |\
+            \ .build.name |= $appname' \\\n   < $(Build.SourcesDirectory)/devops/assets/eui-info-template.json\
+            \ > $(Build.SourcesDirectory)/dist/build-info.json\necho \"============\
+            \ BUILD-INFO.JSON ==============\"\ncat $(Build.SourcesDirectory)/dist/build-info.json\n\
+            echo \"===========================================\"\n"
+      - task: Bash@3
+        displayName: ${{ service }} | Kaniko Build & Push
+        inputs:
+          targetType: inline
+          script: 'echo "Running Kaniko Build & Push"
+
+            mkdir -p $(Pipeline.Workspace)/.kaniko-docker
+
+            echo "{\"auths\":{\"$(containerRegistryFullName)\":{\"username\":\"$(global.acrUsername)\",\"password\":\"$(global.acrPasswd)\"}}}"
+            > $(Pipeline.Workspace)/.kaniko-docker/config.json
+
+            docker login catalina.azurecr.io -u $(global.acrUsername) -p $(global.acrPasswd)
+
+            docker pull catalina.azurecr.io/kaniko/executor:latest
+
+            echo "Starting Kaniko build with Dockerfile: $(dockerFile)"
+
+            docker run --rm -v $(Pipeline.Workspace)/s:/workspace -v $(Pipeline.Workspace)/s/.kaniko-docker:/kaniko/.docker
+            catalina.azurecr.io/kaniko/executor:v1.23.1 --context=$(context) --dockerfile=$(dockerFile)
+            --destination=$(imageTag) --build-arg=$(buildArg)
+
+            '
+- ${{ if contains(variables['Build.SourceBranchName'], 'release_') }}:
+  - parameters:
+      applicationName: ${{ variables.applicationName }}
+      deployProfileList:
+      - eui-us-dev
+      - eui-us-uat1
+      - eui-eu-uat
+      - eui-us-prod
+      - eui-eu-prod
+      projectName: ${{ variables.projectName }}
+    template: stages/cde-stage-cd-approvals-argo.yml@adoRepository
+- ${{ if startsWith(variables['Build.SourceBranchName'], 'mongo_release_') }}:
+  - parameters:
+      applicationName: ${{ variables.applicationName }}
+      deployProfileList:
+      - eui-us-uat-mongo
+      - eui-eu-uat-mongo
+      projectName: ${{ variables.projectName }}
+    template: stages/cde-stage-cd-approvals-argo.yml@adoRepository
+- ${{ elseif contains(variables['Build.SourceBranchName'], 'eu-k8s') }}:
+  - parameters:
+      applicationName: ${{ variables.applicationName }}
+      deployProfileList:
+      - euq-eu-dev-k8s
+      projectName: ${{ variables.projectName }}
+    template: stages/cde-stage-cd-approvals-argo.yml@adoRepository
+- ${{ elseif contains(variables['Build.SourceBranchName'], '-k8s') }}:
+  - parameters:
+      applicationName: ${{ variables.applicationName }}
+      deployProfileList:
+      - eui-us-dev-k8s
+      projectName: ${{ variables.projectName }}
+    template: stages/cde-stage-cd-approvals-argo.yml@adoRepository
+- ${{ elseif contains(variables['Build.SourceBranchName'], 'master-mongo') }}:
+  - parameters:
+      applicationName: ${{ variables.applicationName }}
+      deployProfileList:
+      - eui-us-dev-mongo
+      projectName: ${{ variables.projectName }}
+    template: stages/cde-stage-cd-approvals-argo.yml@adoRepository
+- dependsOn:
+  - Build
+  displayName: Tests & Scans
+  jobs:
+  - job: SonarCloudScan
+    displayName: Run SonarCloud Scan
+    continueOnError: false
+    container:
+      image: catalina.azurecr.io/sonar-scanner:5.0.1
+      endpoint: Catalina ACR
+      mapDockerSocket: true
+    steps:
+    - checkout: self
+    - script: '# Generate coverage report if applicable
+
+        # npx jest --coverage
+
+        sonar-scanner -Dsonar.branch.name=$(Build.SourceBranchName) -Dsonar.token=$(global.sonarToken)
+
+        '
+      displayName: Run SonarCloud Scanner
+  stage: Tests
