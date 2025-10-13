@@ -1,4 +1,3 @@
----
 apiVersion: ops-box.io/v1
 kind: GitDefinition
 metadata:
@@ -15,13 +14,11 @@ spec:
         # RemoteCluster definitions
         - path: "clusters/*.yaml"
           kind: RemoteCluster
-        
         # Internal RBAC
         - path: "roles/*.yaml"
           kind: OBRole
         - path: "subjects/*.yaml"
           kind: OBSubject
-        
         # RBACDefinition CRs for different clusters
         - path: "rbac-definitions/minikube-local-*.yaml"
           kind: RBACDefinition
@@ -32,7 +29,6 @@ spec:
         - path: "rbac-definitions/staging-*.yaml"
           kind: RBACDefinition
           targetCluster: minikube-remote
-        
         # CronDefinition CRs for different clusters
         - path: "cron-definitions/minikube-*.yaml"
           kind: CronDefinition
@@ -43,18 +39,14 @@ spec:
         - path: "cron-definitions/staging-*.yaml"
           kind: CronDefinition
           targetCluster: staging-cluster-gitops
-        
         # GitDefinition CRs (self-sync bootstrap)
         - path: "git-definitions/*.yaml"
           kind: GitDefinition
-        
         # AdoPipelineDefinition CRs
         - path: "ado-definitions/*.yaml"
           kind: AdoPipelineDefinition
-  
-  pollIntervalSeconds: 600  # 10 minutes
-  
+  pollIntervalSeconds: 600 # 10 minutes
   syncPolicy:
     automated:
-      prune: true      # Remove resources deleted from Git
-      selfHeal: true   # Fix drift from manual changes
+      prune: true # Remove resources deleted from Git
+      selfHeal: true # Fix drift from manual changes

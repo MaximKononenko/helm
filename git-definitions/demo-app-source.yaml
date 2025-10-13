@@ -1,0 +1,26 @@
+apiVersion: ops-box.io/v1
+kind: GitDefinition
+metadata:
+  name: demo-app-source
+  namespace: ops-box
+  annotations:
+    description: "Demo Node.js application source code repository"
+spec:
+  repository:
+    url: https://github.com/MaximKononenko/helm.git
+    defaultBranch: test-k8s-ops-box-resources
+  purposes:
+    source:
+      enabled: true
+      scanPaths:
+        - "src/demo-api/**"
+      autoDetect:
+        dockerfiles: true
+        helmCharts: false
+        packageManagers: true
+    cr:
+      enabled: false
+    templates:
+      enabled: false
+    output:
+      enabled: false

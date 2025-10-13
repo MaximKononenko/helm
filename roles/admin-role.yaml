@@ -1,0 +1,80 @@
+apiVersion: ops-box.io/v1
+kind: OBRole
+metadata:
+  name: admin
+  namespace: ops-box
+spec:
+  description: Admin role with full permissions
+  permissions:
+    - allowed: true
+      feature: admin_panel
+      target: all
+    - allowed: true
+      feature: api_access
+      target: all
+    - allowed: true
+      feature: view_rbac_definitions
+      target: all
+    - allowed: true
+      feature: edit_rbac_definitions
+      target: all
+    - allowed: true
+      feature: delete_rbac_definitions
+      target: all
+    - allowed: true
+      feature: view_env_definitions
+      target: all
+    - allowed: true
+      feature: edit_env_definitions
+      target: all
+    - allowed: true
+      feature: delete_env_definitions
+      target: all
+    - allowed: true
+      feature: view_cron_definitions
+      target: all
+    - allowed: true
+      feature: edit_cron_definitions
+      target: all
+    - allowed: true
+      feature: delete_cron_definitions
+      target: all
+    - allowed: true
+      feature: view_git_definitions
+      target: all
+    - allowed: true
+      feature: edit_git_definitions
+      target: all
+    - allowed: true
+      feature: delete_git_definitions
+      target: all
+    - allowed: true
+      feature: view_ado_definitions
+      target: all
+    - allowed: true
+      feature: edit_ado_definitions
+      target: all
+    - allowed: true
+      feature: delete_ado_definitions
+      target: all
+    - allowed: true
+      feature: view_remote_clusters
+      target: all
+    - allowed: true
+      feature: manage_remote_clusters
+      target: all
+    - allowed: true
+      feature: manage_subjects
+      target: all
+    - allowed: true
+      feature: manage_roles
+      target: all
+    - allowed: true
+      feature: view_internal_rbac
+      target: all
+    - allowed: true
+      feature: view_events
+      target: all
+    - allowed: true
+      feature: manage_events
+      target: all
