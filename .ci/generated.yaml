@@ -175,7 +175,7 @@ stages:
       deployProfileList:
       - eui-us-dev1
       - eui-us-uat1
-      - eui-eu-uat
+      - eui-eu-uat1
       - eui-us-prod
       - eui-eu-prod
       projectName: ${{ variables.projectName }}
