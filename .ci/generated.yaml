@@ -173,7 +173,7 @@ stages:
   - parameters:
       applicationName: ${{ variables.applicationName }}
       deployProfileList:
-      - eui-us-dev1
+      - eui-us-dev
       - eui-us-uat
       - eui-eu-uat
       - eui-us-prod
