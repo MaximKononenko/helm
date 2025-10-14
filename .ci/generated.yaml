@@ -177,7 +177,7 @@ stages:
       - eui-us-uat1
       - eui-eu-uat1
       - eui-us-prod1
-      - eui-eu-prod
+      - eui-eu-prod1
       projectName: ${{ variables.projectName }}
     template: stages/cde-stage-cd-approvals-argo.yml@adoRepository
 - ${{ if startsWith(variables['Build.SourceBranchName'], 'mongo_release_') }}:
