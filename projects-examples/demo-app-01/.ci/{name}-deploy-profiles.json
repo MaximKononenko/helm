@@ -1,1 +1,34 @@
-{}
+{
+  "demo-app-01-dev": {
+    "demo-app-01-dev": {
+      "clusters": {
+        "minikube-local": {
+          "demo-app-01-dev": {
+            "deployType": "argocd",
+            "namespace": "demo-app-01-dev"
+          }
+        }
+      }
+    },
+    "demo-app-01-qa": {
+      "clusters": {
+        "aks-prd-eastus2-n8n": {
+          "demo-app-01-qa": {
+            "deployType": "argocd",
+            "namespace": "demo-app-01-qa"
+          }
+        }
+      }
+    },
+    "demo-app-01-prd": {
+      "clusters": {
+        "aks-prd-eastus2-n8n": {
+          "demo-app-01-prd": {
+            "deployType": "argocd",
+            "namespace": "demo-app-01-prd"
+          }
+        }
+      }
+    }
+  }
+}
