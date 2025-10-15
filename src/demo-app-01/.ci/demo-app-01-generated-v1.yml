@@ -1,0 +1,180 @@
+name: projects-examples/demo-app-01/.ci/demo-app-01-generated-v1.yml
+pool:
+  vmImage: ubuntu-latest
+trigger:
+  batch: false
+  branches:
+    include:
+    - main
+    - develop
+variables:
+- name: applicationName
+  value: demo-app-01
+resources:
+  repositories:
+  - name: CMP/cmp-dashboard
+    ref: $(Build.SourceBranch)
+    repository: applicationRepository
+    type: git
+  - name: DeliveryEngineering/argo-apps
+    ref: static-envs
+    repository: argoRepository
+    type: git
+parameters:
+- default:
+  - frontend
+  - backend
+  name: services
+  type: object
+stages:
+- displayName: Build and Test
+  jobs:
+  - container:
+      image: python:3.11-slim
+    displayName: Python Build Job
+    job: PythonBuild
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - displayName: Install Dependencies
+      inputs:
+        script: pip install -r requirements.txt
+        targetType: inline
+      task: Bash@3
+    - displayName: Run Tests
+      inputs:
+        script: pytest tests/ --junitxml=test-results.xml
+        targetType: inline
+      task: Bash@3
+    - displayName: Publish Test Results
+      inputs:
+        testResultsFiles: test-results.xml
+        testResultsFormat: JUnit
+      task: PublishTestResults@2
+  stage: Build
+- dependsOn:
+  - Build
+  displayName: Deploy demo-app-01
+  stage: template
+  jobs: []
+  parameters:
+  - name: projectName
+    type: string
+  - name: applicationName
+    type: string
+  - name: deployProfileList
+    type: object
+    default: []
+  - name: keyVaultServiceConnection
+    type: string
+    default: cmp-pr-service-principal-ado
+  stages:
+  - ${{ each deployProfile in parameters.deployProfileList }}:
+    - stage: Deploy_${{ replace(deployProfile,'-','_') }}
+      displayName: Deploy ${{ deployProfile }}
+      dependsOn: Build
+      jobs:
+      - deployment: deployWithApprove
+        displayName: Deploy Environments
+        environment: ${{ deployProfile }}
+        variables:
+          buildTag: $[stageDependencies.Build.jobBuild.outputs['outputVars.buildTag']]
+        timeoutInMinutes: 0
+        container:
+          image: catalina.azurecr.io/cde-deploy-3-12-slim:1.0.3
+          endpoint: Catalina ACR
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              - download: none
+              - checkout: adoRepository
+                displayName: Checkout azure-pipelines
+                path: azure-pipelines
+              - checkout: argoRepository
+                displayName: Checkout argo-apps
+                path: argo-apps
+                persistCredentials: true
+                clean: true
+                fetchDepth: 1
+              - checkout: applicationRepository
+                displayName: Checkout src repo
+              - task: AzureKeyVault@2
+                name: fetchSecrets
+                inputs:
+                  azureSubscription: ${{ parameters.keyVaultServiceConnection }}
+                  KeyVaultName: kv-prd-eastus2-mngmnt
+                  SecretsFilter: envFile
+                  RunAsPreJob: false
+              - task: Bash@3
+                displayName: Export envFile from Key Vault to ENV
+                inputs:
+                  targetType: inline
+                  script: "echo \"Reading envFile from Key Vault...\"\nif [ -n \"\
+                    $envFile\" ]; then\n  # # Export each line as an env var (with\
+                    \ quotes stripped)\n  # echo \"$envFile\" | while IFS= read -r\
+                    \ line || [ -n \"$line\" ]; do\n  #   [[ \"$line\" =~ ^[^#]*=\
+                    \ ]] || continue\n  #   varName=$(echo \"$line\" | cut -d'=' -f1\
+                    \ | xargs)\n  #   varValue=$(echo \"$line\" | cut -d'=' -f2- |\
+                    \ xargs)\n\n  #   # Remove surrounding quotes\n  #   if [[ \"\
+                    $varValue\" =~ ^\\\".*\\\"$ ]]; then\n  #     varValue=${varValue:1:-1}\n\
+                    \  #   elif [[ \"$varValue\" =~ ^\\'.*\\'$ ]]; then\n  #     varValue=${varValue:1:-1}\n\
+                    \  #   fi\n  # FIXME: This is not working as expected in the next\
+                    \ steps it does not shows exported ENV variables\n  #   export\
+                    \ \"$varName=$varValue\"\n  #   echo \"Exported variable: $varName\"\
+                    \n  # done\n\n  # Write the unquoted export statements to env_exports.sh\n\
+                    \  echo \"#!/bin/bash\" > $(Pipeline.Workspace)/env_exports.sh\n\
+                    \  echo \"# Exported environment variables from envFile\" >> $(Pipeline.Workspace)/env_exports.sh\n\
+                    \n  echo \"$envFile\" | while IFS= read -r line || [ -n \"$line\"\
+                    \ ]; do\n    [[ \"$line\" =~ ^[^#]*= ]] || continue\n    varName=$(echo\
+                    \ \"$line\" | cut -d'=' -f1 | xargs)\n    varValue=$(echo \"$line\"\
+                    \ | cut -d'=' -f2- | xargs)\n    \n    # Remove surrounding quotes\n\
+                    \    if [[ \"$varValue\" =~ ^\\\".*\\\"$ ]]; then\n      varValue=${varValue:1:-1}\n\
+                    \    elif [[ \"$varValue\" =~ ^\\'.*\\'$ ]]; then\n      varValue=${varValue:1:-1}\n\
+                    \    fi\n\n    echo \"export $varName=$varValue\" >> $(Pipeline.Workspace)/env_exports.sh\n\
+                    \  done\n\n  chmod +x $(Pipeline.Workspace)/env_exports.sh\nelse\n\
+                    \  echo \"envFile is empty or not found!\"\n  exit 1\nfi\n"
+                env:
+                  envFile: $(envFile)
+              - task: Bash@3
+                displayName: Execute deployment script
+                inputs:
+                  targetType: inline
+                  workingDirectory: $(System.DefaultWorkingDirectory)
+                  script: "echo \"[ Env vars ] ===================================================================================================================\"\
+                    \necho \"Loading env vars from env_exports.sh\"\n# cat $(Pipeline.Workspace)/env_exports.sh\n\
+                    source $(Pipeline.Workspace)/env_exports.sh\n# env | grep ARGOCD_API_TOKEN_\n\
+                    # echo \"ARGOCD_API_TOKEN_AKS_NP_EASTUS_CMP: ***${ARGOCD_API_TOKEN_AKS_NP_EASTUS_CMP:\
+                    \ -5}\"\n\necho \"[ Check content in azure-pipelines/scripts/CMP/\
+                    \ ] ==================================================================================\"\
+                    \necho \"cd $(System.DefaultWorkingDirectory) <- System.DefaultWorkingDirectory\"\
+                    \ncd $(System.DefaultWorkingDirectory)\npwd\nls -la\necho \"cd\
+                    \ $(Pipeline.Workspace) <- Pipeline.Workspace\"\ncd $(Pipeline.Workspace)\n\
+                    pwd\nls -la\necho \"[ Prepare argo-apps repo ] =========================================================================================================\"\
+                    \ncd $(Pipeline.Workspace)/argo-apps\n\n# Configure Git user\n\
+                    git config --global user.email \"cde@catalina.com\"\ngit config\
+                    \ --global user.name \"CDE Automation\"\n\n# Set authenticated\
+                    \ remote using System.AccessToken\necho \"Updating Git remote\
+                    \ to use System.AccessToken\"\ngit remote set-url origin \"https://$(System.AccessToken)@dev.azure.com/catalinamarketing/DeliveryEngineering/_git/argo-apps\"\
+                    \n\n# Avoid leaking token in logs\necho \"Remote origin updated.\"\
+                    \n\n# Fetch and checkout the desired branch\nargoBranchName=\"\
+                    static-envs\"\ngit fetch origin $argoBranchName\ngit checkout\
+                    \ $argoBranchName || git checkout -b $argoBranchName origin/$argoBranchName\n\
+                    git pull origin $argoBranchName\ngit status\n\necho \"[ Deploy\
+                    \ ] =========================================================================================================================\"\
+                    \n# Create a list of key-value pairs\nparameters_list=()\n#parameters_list+=(\"\
+                    helmChartName=$(applicationName)\")\nparameters_list+=(\"applicationRepo=$(applicationName)\"\
+                    )\nparameters_list+=(\"projectName=$(projectName)\")\nparameters_list+=(\"\
+                    imageTag=$(buildTag)\")\nparameters_list+=(\"deployProfile=${{\
+                    \ deployProfile }}\")\nparameters_list+=(\"pipelineWorkspace=$(System.DefaultWorkingDirectory)\"\
+                    )\n\n# Redundant Vars\nparameters_list+=(\"buildId=$(build.buildId)\"\
+                    )\nparameters_list+=(\"branchName=$(Build.SourceBranchName)\"\
+                    )\nparameters_list+=(\"dynamicEnvTtl=$(dynamicEnvTtl)\")\n\ncase\
+                    \ \"$(applicationName)\" in\n  cmp-core|eui|partner-api|bulk|retailer-api|job-management-service-front)\n\
+                    \    parameters_list+=(\"pipelineWorkspace=$(System.DefaultWorkingDirectory)\"\
+                    )\n    ;;\n  *)\n    parameters_list+=(\"pipelineWorkspace=$(Pipeline.Workspace)\"\
+                    )\n    ;;\nesac\n\n# Join the list into a string separated by\
+                    \ spaces\nparameters_string=$(IFS=' ' ; echo \"${parameters_list[*]}\"\
+                    )\necho \"python3 azure-pipelines/scripts/cde_k8s_deploy.py $parameters_string\"\
+                    \ncd $(Pipeline.Workspace)\npython3 azure-pipelines/scripts/cde_k8s_deploy.py\
+                    \ $parameters_string\n"
