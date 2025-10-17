@@ -1,0 +1,25 @@
+name: $(Build.SourceBranchName).$(Build.BuildId)
+pr: none
+pool: vmss-pr-eastus2-ado-cmp
+
+resources:
+  repositories:
+  - repository: adoRepository
+    type: git
+    name: DeliveryEngineering/azure-pipelines
+    ref: main
+
+variables:
+- group: devops-credentials
+- group: openai-credentials
+- group: ACR Catalina
+- name: projectName
+  value: cmp
+- name: dockerFile
+  value: 'devops/Dockerfile'
+- name: containerRegistry
+  value: 'Catalina ACR'
+- name: context
+  value: '.'
+- name: dynamicEnvTtl
+  value: "default"

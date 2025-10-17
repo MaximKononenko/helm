@@ -1,0 +1,9 @@
+if [ ${{ service }} == "eui" ]; then
+  buildArg=ARTIFACTS_PATH=dist
+  echo "##vso[task.setvariable variable=buildArg]$buildArg"
+elif [ ${{ service }} == "eui-kv-config-expander" ]; then
+  dockerFile="devops/kv-config-expander.Dockerfile"
+  buildArg="REGISTRY=$containerRegistryFullName"
+  echo "##vso[task.setvariable variable=dockerFile]$dockerFile"
+  echo "##vso[task.setvariable variable=buildArg]$buildArg"
+fi

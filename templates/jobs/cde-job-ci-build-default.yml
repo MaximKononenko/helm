@@ -1,0 +1,29 @@
+job: jobBuild
+displayName: Build Job
+timeoutInMinutes: 0
+continueOnError: false
+container:
+  image: catalina.azurecr.io/docker/eui-node
+  endpoint: 'Catalina ACR'
+  mapDockerSocket: true
+steps:
+- task: Bash@3
+  name: systemDiagnosticsBefore
+  displayName: "System diagnostics before job runs"
+  inputs:
+    targetType: 'inline'
+    script: |
+      echo "Output of docker system df"
+      sudo docker system df
+      df -h
+- checkout: applicationRepository
+  name: checkoutApplicationRepository
+  displayName: Checkout $(applicationName)
+  enabled: true
+  persistCredentials: true
+  fetchDepth: 250
+- task: Bash@3
+  displayName: 'Display all predefined variables'
+  inputs:
+    targetType: 'inline'
+    script: 'env | sort'
