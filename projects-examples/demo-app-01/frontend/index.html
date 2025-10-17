@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K8s-Ops-Box - Kubernetes Operations Management Platform</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="img/favicon.png" type="image/png">
+    <style>
+        /* Clickable image effects */
+        .clickable-slide-image, .arch-diagram {
+            transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+        }
+        
+        .clickable-slide-image:hover, .arch-diagram:hover {
+            transform: scale(1.05) !important;
+            box-shadow: 0 0 20px rgba(255, 184, 0, 0.8) !important;
+            cursor: pointer !important;
+        }
+        
+        /* Responsive carousel layout */
+        @media (max-width: 768px) {
+            .slide-content {
+                flex-direction: column-reverse !important;
+            }
+            .slide-text, .slide-image {
+                flex: 0 0 100% !important;
+                padding-right: 0 !important;
+                margin-bottom: 15px !important;
+            }
+            .slide-text h3 {
+                font-size: 1.5em !important;
+                margin-bottom: 15px !important;
+            }
+            .slide-text p {
+                font-size: 1em !important;
+                margin-bottom: 12px !important;
+            }
+            .slide-image img {
+                max-height: 220px !important;
+            }
+        }
+        
+        /* Modal animation */
+        @keyframes zoomIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        #simpleModalImg {
+            animation: zoomIn 0.3s ease-out;
+            transition: transform 0.3s ease !important;
+            cursor: zoom-in !important;
+            max-width: 100% !important; /* Ensure image can display at full size */
+            object-fit: contain !important;
+        }
+        
+        #simpleModalImg.zoomed {
+            transform: scale(1.8) !important;
+            cursor: zoom-out !important;
+            max-width: 150% !important; /* Allow even larger size when zoomed */
+            max-height: none !important;
+        }
+        
+        .image-container {
+            overflow: auto;
+            max-height: 100vh;
+            max-width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <span class="brand-name">K8s-Ops-Box</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#hero" class="nav-link active">Home</a></li>
+                <li><a href="#features" class="nav-link">Features</a></li>
+                <li><a href="#architecture" class="nav-link">Architecture</a></li>
+                <li><a href="#screenshots" class="nav-link">Screenshots</a></li>
+                <li><a href="#docs" class="nav-link">Documentation</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
+            <button class="mobile-menu-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-logo">
+                    <img src="img/OB-logo-black-bg.png" alt="K8s-Ops-Box" class="home-logo">
+                </div>
+                <h1 class="hero-title">
+                    Operations <br>
+                    <span class="gradient-text">Simplified</span>
+                </h1>
+                <p class="hero-subtitle">
+                    A comprehensive platform for managing Kubernetes RBAC, GitOps workflows, 
+                    and ADO Pipeline automation - all in one place.
+                </p>
+                <div class="hero-buttons">
+                    <a href="#features" class="btn btn-primary">Explore Features</a>
+                    <a href="#docs" class="btn btn-secondary">View Documentation</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-value">4</span>
+                        <span class="stat-label">Core Components</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">100%</span>
+                        <span class="stat-label">GitOps Driven</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">Real-time</span>
+                        <span class="stat-label">Event Streaming</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="hero-background"></div>
+    </section>
+
+    <!-- Features Section - Welcome Carousel -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Welcome to ops-box</h2>
+                <p class="section-subtitle">Transforming Kubernetes Operations</p>
+            </div>
+            <div class="welcome-carousel" id="welcome-carousel">
+                <div class="carousel-container">
+                    <!-- First slide - explicitly styled for initial visibility -->
+                    <div class="carousel-slide active" id="slide1" style="display: block; visibility: visible; opacity: 1;">
+                        <div class="slide-content" style="display: flex; flex-direction: row; align-items: center;">
+                            <div class="slide-text" style="flex: 0 0 40%; padding-right: 20px; padding-top: 30px; padding-bottom: 30px;">
+                                <h3 style="font-size: 1.8em; margin-bottom: 20px;">Sound familiar?</h3>
+                                <p style="font-size: 1.2em; margin-bottom: 16px;">Your business needs to scale, but you want to save on delivery costs.</p>
+                                <p style="font-size: 1.2em; margin-bottom: 16px;">Balancing growing demands with infrastructure optimization can be overwhelming.</p>
+                            </div>
+                            <div class="slide-image" style="flex: 0 0 60%;">
+                                <img src="img/slide1.png" alt="Business scaling challenges" style="max-height: 370px; width: auto; object-fit: contain; cursor: pointer; display: block; margin: 0 auto;" class="clickable-slide-image" onclick="openImageModal(this)">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Second slide - explicitly styled for initial hiding -->
+                    <div class="carousel-slide" id="slide2" style="display: none; visibility: hidden; opacity: 0;">
+                        <div class="slide-content" style="display: flex; flex-direction: row; align-items: center;">
+                            <div class="slide-text" style="flex: 0 0 40%; padding-right: 20px; padding-top: 30px; padding-bottom: 30px;">
+                                <h3 style="font-size: 1.8em; margin-bottom: 20px;">Meet ops-box</h3>
+                                <p style="font-size: 1.2em; margin-bottom: 16px;">ops-box is an extensible Kubernetes platform which converts your operations into basic requests, automates infrastructure and code delivery in minutes.</p>
+                                <p style="font-size: 1.2em; margin-bottom: 16px;">AI & GitOps friendly, keep your DevOps aura on a senior level regardless of your experience. Hold tight!</p>
+                            </div>
+                            <div class="slide-image" style="flex: 0 0 60%;">
+                                <img src="img/slide2.png" alt="Ops-box solution" style="max-height: 370px; width: auto; object-fit: contain; cursor: pointer; display: block; margin: 0 auto;" class="clickable-slide-image" onclick="openImageModal(this)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slider-controls">
+                    <button class="slider-btn prev" id="prevBtn">‹</button>
+                    <div class="slider-dots">
+                        <span class="slider-dot active" data-slide="0"></span>
+                        <span class="slider-dot" data-slide="1"></span>
+                    </div>
+                    <button class="slider-btn next" id="nextBtn">›</button>
+                </div>
+            </div>
+            <div class="features-grid" id="features-grid">
+                <!-- Features will be loaded dynamically -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture" class="architecture">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Architecture Overview</h2>
+                <p class="section-subtitle">Built with modern, scalable architecture</p>
+            </div>
+            <div class="architecture-image">
+                <img src="img/architecture.png" alt="Architecture Diagram" class="arch-diagram clickable-slide-image" onclick="openImageModal(this)">
+            </div>
+            <div class="architecture-content">
+                <div class="components-grid" id="components-grid">
+                    <!-- Components will be loaded dynamically -->
+                </div>
+                <div class="data-flow">
+                    <h3 class="flow-title">Data Flow</h3>
+                    <div class="flow-steps" id="flow-steps">
+                        <!-- Flow steps will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screenshots Section -->
+    <section id="screenshots" class="screenshots">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">See It In Action</h2>
+                <p class="section-subtitle">Explore the intuitive user interface</p>
+            </div>
+            <div class="screenshots-slider">
+                <div class="slider-container" id="screenshots-slider">
+                    <!-- Screenshots will be loaded dynamically -->
+                </div>
+                <div class="slider-controls">
+                    <button class="slider-btn prev" aria-label="Previous">‹</button>
+                    <div class="slider-dots" id="slider-dots"></div>
+                    <button class="slider-btn next" aria-label="Next">›</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Documentation Section -->
+    <section id="docs" class="documentation">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Documentation</h2>
+                <p class="section-subtitle">Comprehensive guides and references</p>
+            </div>
+            <div class="docs-grid" id="docs-grid">
+                <!-- Documentation links will be loaded dynamically -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Get In Touch</h2>
+                <p class="section-subtitle">Have questions? We're here to help</p>
+            </div>
+            <div class="contact-content" id="contact-content">
+                <!-- Contact information will be loaded dynamically -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>K8s-Ops-Box</h4>
+                    <p>Kubernetes Operations Management Platform</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#architecture">Architecture</a></li>
+                        <li><a href="#docs">Documentation</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="#" id="github-link">GitHub</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 K8s-Ops-Box. Built with ❤️ by the Platform Team.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading Indicator -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Simple Modal with improved structure -->
+    <div id="simpleModal" style="display:none; position:fixed; z-index:10000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.9); overflow:auto;" onclick="this.style.display='none'; document.body.style.overflow='';">
+        <span style="position:absolute; top:15px; right:35px; color:white; font-size:40px; font-weight:bold; cursor:pointer; background-color:rgba(255,184,0,0.8); width:50px; height:50px; text-align:center; line-height:50px; border-radius:50%; z-index:10001;" onclick="event.stopPropagation(); document.getElementById('simpleModal').style.display='none'; document.body.style.overflow='';">&times;</span>
+        <div class="image-container" style="min-height:100%; width:100%; display:flex; justify-content:center; align-items:center;" onclick="event.stopPropagation();">
+            <img id="simpleModalImg" style="display:block; margin:20px; max-width:95%; max-height:95vh; border-radius:8px; box-shadow:0 0 20px rgba(255,184,0,0.8); object-fit:contain;" onclick="event.stopPropagation(); toggleZoom(this);" title="Click to zoom in/out">
+        </div>
+    </div>
+
+    <script>
+        // Function to open the image modal with improved full-size display
+        function openImageModal(img) {
+            // Ensure the image is loaded before showing modal
+            var modalImg = document.getElementById('simpleModalImg');
+            var modal = document.getElementById('simpleModal');
+            
+            // Reset any previous zoom
+            modalImg.classList.remove('zoomed');
+            
+            // Create a new image object to get the natural dimensions
+            var tempImg = new Image();
+            tempImg.onload = function() {
+                // Set full-size image dimensions
+                console.log('Natural image size:', tempImg.naturalWidth, 'x', tempImg.naturalHeight);
+                
+                // Show the modal now that we know the image dimensions
+                modal.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+                console.log('Modal opened, displaying image:', modalImg.src);
+            };
+            
+            // Set the image source - this will trigger the onload event above
+            modalImg.src = img.src;
+            tempImg.src = img.src;
+            
+            // Add keyboard listener for escape key
+            document.addEventListener('keydown', function closeOnEscape(e) {
+                if (e.key === 'Escape') {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = '';
+                    document.removeEventListener('keydown', closeOnEscape);
+                }
+            });
+        }
+        
+        // Toggle zoom effect on the modal image
+        function toggleZoom(imgElement) {
+            console.log('Toggling zoom on image');
+            
+            const container = imgElement.closest('.image-container');
+            
+            // Toggle zoomed class
+            imgElement.classList.toggle('zoomed');
+            
+            if (imgElement.classList.contains('zoomed')) {
+                // When zoomed in
+                container.style.overflow = 'auto';
+                imgElement.title = 'Click to zoom out';
+                console.log('Image zoomed in');
+            } else {
+                // When zoomed out
+                container.style.overflow = 'hidden';
+                imgElement.title = 'Click to zoom in';
+                // Reset scroll position
+                container.scrollLeft = 0;
+                container.scrollTop = 0;
+                console.log('Image zoomed out');
+            }
+        }
+    </script>
+    
+    <script src="js/app.js"></script>
+</body>
+</html>
