@@ -78,7 +78,7 @@ stages:
         displayName: Deploy Environments
         environment: ${{ deployProfile }}
         variables:
-          buildTag: $[stageDependencies.Build.jobBuild.outputs['outputVars.buildTag']]
+          buildTag: "$[stageDependencies.Build.jobBuild.outputs['outputVars.buildTag']]"
         timeoutInMinutes: 0
         container:
           image: catalina.azurecr.io/cde-deploy-3-12-slim:1.0.3
@@ -141,40 +141,70 @@ stages:
                 inputs:
                   targetType: inline
                   workingDirectory: $(System.DefaultWorkingDirectory)
-                  script: "echo \"[ Env vars ] ===================================================================================================================\"\
-                    \necho \"Loading env vars from env_exports.sh\"\n# cat $(Pipeline.Workspace)/env_exports.sh\n\
-                    source $(Pipeline.Workspace)/env_exports.sh\n# env | grep ARGOCD_API_TOKEN_\n\
-                    # echo \"ARGOCD_API_TOKEN_AKS_NP_EASTUS_CMP: ***${ARGOCD_API_TOKEN_AKS_NP_EASTUS_CMP:\
-                    \ -5}\"\n\necho \"[ Check content in azure-pipelines/scripts/CMP/\
-                    \ ] ==================================================================================\"\
-                    \necho \"cd $(System.DefaultWorkingDirectory) <- System.DefaultWorkingDirectory\"\
-                    \ncd $(System.DefaultWorkingDirectory)\npwd\nls -la\necho \"cd\
-                    \ $(Pipeline.Workspace) <- Pipeline.Workspace\"\ncd $(Pipeline.Workspace)\n\
-                    pwd\nls -la\necho \"[ Prepare argo-apps repo ] =========================================================================================================\"\
-                    \ncd $(Pipeline.Workspace)/argo-apps\n\n# Configure Git user\n\
-                    git config --global user.email \"cde@catalina.com\"\ngit config\
-                    \ --global user.name \"CDE Automation\"\n\n# Set authenticated\
-                    \ remote using System.AccessToken\necho \"Updating Git remote\
-                    \ to use System.AccessToken\"\ngit remote set-url origin \"https://$(System.AccessToken)@dev.azure.com/catalinamarketing/DeliveryEngineering/_git/argo-apps\"\
-                    \n\n# Avoid leaking token in logs\necho \"Remote origin updated.\"\
-                    \n\n# Fetch and checkout the desired branch\nargoBranchName=\"\
-                    static-envs\"\ngit fetch origin $argoBranchName\ngit checkout\
-                    \ $argoBranchName || git checkout -b $argoBranchName origin/$argoBranchName\n\
-                    git pull origin $argoBranchName\ngit status\n\necho \"[ Deploy\
-                    \ ] =========================================================================================================================\"\
-                    \n# Create a list of key-value pairs\nparameters_list=()\n#parameters_list+=(\"\
-                    helmChartName=$(applicationName)\")\nparameters_list+=(\"applicationRepo=$(applicationName)\"\
-                    )\nparameters_list+=(\"projectName=$(projectName)\")\nparameters_list+=(\"\
-                    imageTag=$(buildTag)\")\nparameters_list+=(\"deployProfile=${{\
-                    \ deployProfile }}\")\nparameters_list+=(\"pipelineWorkspace=$(System.DefaultWorkingDirectory)\"\
-                    )\n\n# Redundant Vars\nparameters_list+=(\"buildId=$(build.buildId)\"\
-                    )\nparameters_list+=(\"branchName=$(Build.SourceBranchName)\"\
-                    )\nparameters_list+=(\"dynamicEnvTtl=$(dynamicEnvTtl)\")\n\ncase\
-                    \ \"$(applicationName)\" in\n  cmp-core|eui|partner-api|bulk|retailer-api|job-management-service-front)\n\
-                    \    parameters_list+=(\"pipelineWorkspace=$(System.DefaultWorkingDirectory)\"\
-                    )\n    ;;\n  *)\n    parameters_list+=(\"pipelineWorkspace=$(Pipeline.Workspace)\"\
-                    )\n    ;;\nesac\n\n# Join the list into a string separated by\
-                    \ spaces\nparameters_string=$(IFS=' ' ; echo \"${parameters_list[*]}\"\
-                    )\necho \"python3 azure-pipelines/scripts/cde_k8s_deploy.py $parameters_string\"\
-                    \ncd $(Pipeline.Workspace)\npython3 azure-pipelines/scripts/cde_k8s_deploy.py\
-                    \ $parameters_string\n"
+                  script: |
+                    echo "[ Env vars ] ==================================================================================================================="
+                    echo "Loading env vars from env_exports.sh"
+                    # cat $(Pipeline.Workspace)/env_exports.sh
+                    source $(Pipeline.Workspace)/env_exports.sh
+                    # env | grep ARGOCD_API_TOKEN_
+                    # echo "ARGOCD_API_TOKEN_AKS_NP_EASTUS_CMP: ***${ARGOCD_API_TOKEN_AKS_NP_EASTUS_CMP: -5}"
+
+                    echo "[ Check content in azure-pipelines/scripts/CMP/ ] =================================================================================="
+                    echo "cd $(System.DefaultWorkingDirectory) <- System.DefaultWorkingDirectory"
+                    cd $(System.DefaultWorkingDirectory)
+                    pwd
+                    ls -la
+                    echo "cd $(Pipeline.Workspace) <- Pipeline.Workspace"
+                    cd $(Pipeline.Workspace)
+                    pwd
+                    ls -la
+                    echo "[ Prepare argo-apps repo ] ========================================================================================================="
+                    cd $(Pipeline.Workspace)/argo-apps
+
+                    # Configure Git user
+                    git config --global user.email "cde@catalina.com"
+                    git config --global user.name "CDE Automation"
+
+                    # Set authenticated remote using System.AccessToken
+                    echo "Updating Git remote to use System.AccessToken"
+                    git remote set-url origin "https://$(System.AccessToken)@dev.azure.com/catalinamarketing/DeliveryEngineering/_git/argo-apps"
+
+                    # Avoid leaking token in logs
+                    echo "Remote origin updated."
+
+                    # Fetch and checkout the desired branch
+                    argoBranchName="static-envs"
+                    git fetch origin $argoBranchName
+                    git checkout $argoBranchName || git checkout -b $argoBranchName origin/$argoBranchName
+                    git pull origin $argoBranchName
+                    git status
+
+                    echo "[ Deploy ] ========================================================================================================================="
+                    # Create a list of key-value pairs
+                    parameters_list=()
+                    #parameters_list+=("helmChartName=$(applicationName)")
+                    parameters_list+=("applicationRepo=$(applicationName)")
+                    parameters_list+=("projectName=$(projectName)")
+                    parameters_list+=("imageTag=$(buildTag)")
+                    parameters_list+=("deployProfile=${{ deployProfile }}")
+                    parameters_list+=("pipelineWorkspace=$(System.DefaultWorkingDirectory)")
+
+                    # Redundant Vars
+                    parameters_list+=("buildId=$(build.buildId)")
+                    parameters_list+=("branchName=$(Build.SourceBranchName)")
+                    parameters_list+=("dynamicEnvTtl=$(dynamicEnvTtl)")
+
+                    case "$(applicationName)" in
+                      cmp-core|eui|partner-api|bulk|retailer-api|job-management-service-front)
+                        parameters_list+=("pipelineWorkspace=$(System.DefaultWorkingDirectory)")
+                        ;;
+                      *)
+                        parameters_list+=("pipelineWorkspace=$(Pipeline.Workspace)")
+                        ;;
+                    esac
+
+                    # Join the list into a string separated by spaces
+                    parameters_string=$(IFS=' ' ; echo "${parameters_list[*]}")
+                    echo "python3 azure-pipelines/scripts/cde_k8s_deploy.py $parameters_string"
+                    cd $(Pipeline.Workspace)
+                    python3 azure-pipelines/scripts/cde_k8s_deploy.py $parameters_string
