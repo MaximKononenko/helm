@@ -1,0 +1,91 @@
+apiVersion: ops-box.io/v1
+kind: AdoPipelineDefinition
+metadata:
+  name: demo-app-01-loop-example
+  namespace: ops-box
+spec:
+  sourceRepository:
+    repoType: monoRepo
+    gitDefinitionName: demo-app-source
+    services:
+      - name: frontend
+        serviceType: react
+        serviceSrcPath: projects-examples/demo-app-01/frontend
+        buildCommand: npm ci && npm run build
+        testCommand: npm test
+        dockerfilePath: projects-examples/demo-app-01/frontend/Dockerfile
+      - name: backend
+        serviceType: python
+        serviceSrcPath: projects-examples/demo-app-01/backend
+        buildCommand: pip install -r requirements.txt
+        testCommand: pytest tests/ --junitxml=test-results.xml
+        dockerfilePath: projects-examples/demo-app-01/backend/Dockerfile
+  pipelineDefinition:
+    name: demo-app-01-loop
+    trigger:
+      branches:
+        include:
+          - main
+          - develop
+    parameters:
+      - name: services
+        type: object
+        default:
+          - frontend
+          - backend
+    variables:
+      - name: dockerRegistryServiceConnection
+        value: acr-connection
+      - name: dockerRegistry
+        value: myacr.azurecr.io
+    stages:
+      - stage: Build
+        displayName: Build and Test
+        jobs:
+          # Using the loop approach from the roadmap document
+          - loop: "${{ each service in parameters.services }}"
+            items:
+              - job: "build_${{ replace(service, '-', '_') }}"
+                displayName: "Build - ${{ service }}"
+                steps:
+                  - task: Bash@3
+                    displayName: "${{ service }} | Service Info"
+                    inputs:
+                      targetType: inline
+                      script: |
+                        echo "Building service: ${{ service }}"
+                        echo "Working directory: projects-examples/demo-app-01/${{ service }}"
+                  - ${{ if eq(service, 'frontend') }}:
+                      - task: Bash@3
+                        displayName: "Build Frontend"
+                        inputs:
+                          targetType: inline
+                          script: |
+                            echo "Building frontend service"
+                            cd projects-examples/demo-app-01/frontend
+                            npm run build
+                  - ${{ if eq(service, 'backend') }}:
+                      - task: Bash@3
+                        displayName: "Build Backend"
+                        inputs:
+                          targetType: inline
+                          script: |
+                            echo "Building backend service"
+                            cd projects-examples/demo-app-01/backend
+                            pip install -r requirements.txt
+                            pytest tests/ --junitxml=test-results.xml
+                  - task: Docker@2
+                    displayName: "${{ service }} | Docker Build & Push"
+                    inputs:
+                      command: buildAndPush
+                      repository: "$(dockerRegistry)/${{ service }}"
+                      dockerfile: "projects-examples/demo-app-01/${{ service }}/Dockerfile"
+                      containerRegistry: "$(dockerRegistryServiceConnection)"
+                      tags: |
+                        $(Build.BuildId)
+                        latest
+      - stage: template
+        baseTemplate: stages/cde-stage-cd-approvals-argo.yml
+        displayName: Deploy demo-app-01
+        dependsOn:
+          - Build
