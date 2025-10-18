@@ -18,9 +18,17 @@ This repository contains sample k8s-ops-box Custom Resources for testing GitOps 
 │   ├── dev-rbac.yaml
 │   ├── minikube-local-rbac.yaml
 │   └── staging-rbac.yaml
-└── cron-definitions/      # CronDefinition CRs (with targetCluster)
-    ├── minikube-backup.yaml
-    └── python-health-check.yaml
+├── cron-definitions/      # CronDefinition CRs (with targetCluster)
+│   ├── minikube-backup.yaml
+│   └── python-health-check.yaml
+├── git-definitions/       # GitDefinition CRs
+│   ├── demo-app-source.yaml
+│   ├── test-ado-gitops.yaml
+│   └── test-gitops-local.yaml
+└── projects-examples/     # Example projects with Helm charts
+    ├── demo-app-01/       # Demo app with umbrella chart structure
+    │   └── helm/          # Helm chart with frontend and backend subcharts
+    └── demo-app-02/       # Another demo app (placeholder)
 ```
 
 ## Resources
@@ -44,6 +52,17 @@ This repository contains sample k8s-ops-box Custom Resources for testing GitOps 
 ### Cron Definitions (2)
 - `minikube-backup` - Bash job that runs every 15 minutes (backup simulation)
 - `python-health-check` - Python health check job every 10 minutes
+
+### Git Definitions (3)
+- `demo-app-source` - Git source for demo application
+- `test-ado-gitops` - Azure DevOps Git integration test
+- `test-gitops-local` - Local Git integration test
+
+### Project Examples (2)
+- `demo-app-01` - Demo application with Helm chart using umbrella structure
+  - Frontend component with Nginx
+  - Backend component with Node.js
+- `demo-app-02` - Placeholder for another demo application
 
 ## Usage
 
