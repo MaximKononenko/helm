@@ -1,4 +1,4 @@
-name: demo-app-01
+name: Monorepo - Multi-Service CI/CD
 pool:
   vmImage: ubuntu-latest
 trigger:
@@ -7,6 +7,23 @@ trigger:
       - main
       - develop
 parameters:
+  - default: $(containerRegistry)
+    name: containerRegistry
+    type: string
+  - default: $(projectName)
+    name: projectName
+    type: string
+  - default: gcr.io/kaniko-project/executor:latest
+    name: kanikoExecutor
+    type: string
+  - default: --cache=true --cache-ttl=24h
+    name: kanikoOptions
+    type: string
+  - default: .
+    description: Default context path - will be overridden by service-specific paths
+      in monorepo
+    name: context
+    type: string
   - default:
       - front
       - back
@@ -55,28 +72,6 @@ parameters:
 stages:
   - displayName: Build and Test
     jobs:
-      - container:
-          image: golang:1.21-alpine
-        displayName: Go Build Job
-        job: GoBuild
-        pool:
-          vmImage: ubuntu-latest
-        steps:
-          - displayName: Get Dependencies
-            inputs:
-              script: go mod download
-              targetType: inline
-            task: Bash@3
-          - displayName: Run Tests
-            inputs:
-              script: go test -v ./...
-              targetType: inline
-            task: Bash@3
-          - displayName: Build Application
-            inputs:
-              script: go build -v ./...
-              targetType: inline
-            task: Bash@3
       - ${{ each service in parameters.services }}:
           - displayName: Kaniko Build & Push - ${{ service }}
             job: kaniko_${{ replace(service, '-', '_') }}
