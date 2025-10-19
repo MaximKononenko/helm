@@ -1,4 +1,4 @@
-name: projects-examples/demo-app-01/.ci/demo-app-01-generated-v1.yml
+name: Aurelia/Node.js - Default CI
 pool:
   vmImage: ubuntu-latest
 trigger:
@@ -22,197 +22,203 @@ resources:
       type: git
 parameters:
   - default:
-      - frontend
-      - backend
+      - demo-app-01-python-front
+      - demo-app-01-fastapi-back
     name: services
     type: object
+  - default:
+      demo-app-01-fastapi-back:
+        ArtifactsPath: projects-examples/demo-app-01/services/backend
+        BuildArgs: []
+        BuildCommand: pip install -r requirements.txt
+        DockerfilePath: projects-examples/demo-app-01/backend/Dockerfile
+        KanikoOptions: --cache=true --cache-ttl=24h
+        ServiceName: demo-app-01-fastapi-back
+        ServicePath: projects-examples/demo-app-01/backend
+        ServiceType: python
+        TestCommand: pytest tests/ --junitxml=test-results.xml
+      demo-app-01-python-front:
+        ArtifactsPath: projects-examples/demo-app-01/services/frontend
+        BuildArgs: []
+        BuildCommand: npm run build
+        DockerfilePath: projects-examples/demo-app-01/frontend/Dockerfile
+        KanikoOptions: --cache=true --cache-ttl=24h
+        ServiceName: demo-app-01-python-front
+        ServicePath: projects-examples/demo-app-01/frontend
+        ServiceType: python
+        TestCommand: npm test
+    name: servicesConfig
+    type: object
+  - default: $(containerRegistry)
+    name: containerRegistry
+    type: string
+  - default: $(projectName)
+    name: projectName
+    type: string
+  - default: gcr.io/kaniko-project/executor:latest
+    name: kanikoExecutor
+    type: string
+  - default: --cache=true --cache-ttl=24h
+    name: kanikoOptions
+    type: string
+  - default: .
+    description: Default context path - will be overridden by service-specific paths
+      in monorepo
+    name: context
+    type: string
 stages:
   - displayName: Build and Test
     jobs:
       - container:
-          image: python:3.11-slim
-        displayName: Python Build Job
-        job: PythonBuild
+          image: node:18-alpine
+        displayName: Aurelia Build Job
+        job: AureliaBuild
         pool:
           vmImage: ubuntu-latest
         steps:
           - displayName: Install Dependencies
             inputs:
-              script: pip install -r requirements.txt
+              script: npm ci
               targetType: inline
             task: Bash@3
           - displayName: Run Tests
             inputs:
-              script: pytest tests/ --junitxml=test-results.xml
+              script: npm test
               targetType: inline
             task: Bash@3
-          - displayName: Publish Test Results
+          - displayName: Build Application
             inputs:
-              testResultsFiles: test-results.xml
-              testResultsFormat: JUnit
-            task: PublishTestResults@2
+              script: npm run build
+              targetType: inline
+            task: Bash@3
+      - ${{ each service in parameters.services }}:
+          - displayName: Kaniko Build & Push - ${{ service }}
+            job: kaniko_${{ replace(service, '-', '_') }}
+            steps:
+              - displayName: ${{ service }} | Prepare Build Environment
+                inputs:
+                  script: |-
+                    echo "Preparing build environment for service: ${{ service }}"
+                    echo "Service source path: ${{ parameters.servicesConfig.${{ service }}.ServicePath }}"
+                    echo "Service type: ${{ parameters.servicesConfig.${{ service }}.ServiceType }}"
+                  targetType: inline
+                task: Bash@3
+              - task: Bash@3
+                displayName: ${{ service }} | Set Build Variables
+                inputs:
+                  targetType: inline
+                  script: |-
+                    acrRepoName="$(projectName)"
+                    echo "##vso[task.setvariable variable=acrRepoName;isOutput=false]$acrRepoName"
+                    buildArg=""
+                    echo "##vso[task.setvariable variable=buildArg;isOutput=false]$buildArg"
+                    containerRegistryFullName="$(containerRegistry)"
+                    echo "##vso[task.setvariable variable=containerRegistryFullName;isOutput=false]$containerRegistryFullName"
+                    context="${{ parameters.servicesConfig.${{ service }}.ServicePath }}"
+                    echo "##vso[task.setvariable variable=context;isOutput=false]$context"
+                    dockerFile="${{ parameters.servicesConfig.${{ service }}.DockerfilePath }}"
+                    echo "##vso[task.setvariable variable=dockerFile;isOutput=false]$dockerFile"
+                    imageTag="$(containerRegistry)/$(projectName)/${{service}}:$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+                    echo "##vso[task.setvariable variable=imageTag;isOutput=false]$imageTag"
+                    service="${{service}}"
+                    echo "##vso[task.setvariable variable=service;isOutput=false]$service"
+
+                    # Injected script
+                    if [ ${{ service }} == "eui" ]; then
+                      buildArg=ARTIFACTS_PATH=dist
+                      echo "##vso[task.setvariable variable=buildArg]$buildArg"
+                    elif [ ${{ service }} == "eui-kv-config-expander" ]; then
+                      dockerFile="devops/kv-config-expander.Dockerfile"
+                      buildArg="REGISTRY=$containerRegistryFullName"
+                      echo "##vso[task.setvariable variable=dockerFile]$dockerFile"
+                      echo "##vso[task.setvariable variable=buildArg]$buildArg"
+                    fi
+
+                    # Initial debug messages
+
+                    echo "Set variables (initial state)"
+                    echo "acrRepoName: $acrRepoName"
+                    echo "buildArg: $buildArg"
+                    echo "containerRegistryFullName: $containerRegistryFullName"
+                    echo "context: $context"
+                    echo "dockerFile: $dockerFile"
+                    echo "imageTag: $imageTag"
+                    echo "service: $service"
+              - task: Bash@3
+                displayName: ${{ service }} | Create build-info.json
+                inputs:
+                  targetType: inline
+                  script: |
+                    # Create build info JSON file
+
+                    echo "Creating build-info.json for service: $service"
+
+                    # Get current timestamp
+                    BUILD_TIME=$(date '+%Y-%m-%dT%H:%M:%SZ')
+                    BUILD_URL=$SYSTEM_TEAMFOUNDATIONCOLLECTIONURI/$SYSTEM_TEAMPROJECT/_build/results?buildId=$BUILD_BUILDID
+
+                    # Create the directory for build-info.json if it doesn't exist
+                    mkdir -p $(Build.SourcesDirectory)/$context/build-info
+
+                    # Create build-info.json
+                    cat > $(Build.SourcesDirectory)/$context/build-info/build-info.json << EOF
+                    {
+                      "build": {
+                        "id": "$(Build.BuildId)",
+                        "number": "$(Build.BuildNumber)",
+                        "time": "$BUILD_TIME",
+                        "name": "$service",
+                        "url": "$BUILD_URL"
+                      },
+                      "git": {
+                        "branch": "$(Build.SourceBranchName)",
+                        "commit": {
+                          "id": "$(Build.SourceVersion)"
+                        }
+                      },
+                      "image": {
+                        "tag": "$imageTag"
+                      }
+                    }
+                    EOF
+
+                    echo "============ BUILD-INFO.JSON =============="
+                    cat $(Build.SourcesDirectory)/$context/build-info/build-info.json
+                    echo "==========================================="
+              - task: Bash@3
+                displayName: ${{ service }} | Kaniko Build & Push
+                inputs:
+                  targetType: inline
+                  script: |
+                    # Kaniko build and push script for monorepo services
+
+                    echo "Running Kaniko Build & Push for service: $service"
+                    echo "Docker file path: $dockerFile"
+                    echo "Image tag: $imageTag"
+                    echo "Context: $context"
+
+                    # Set up Docker credential helper for Kaniko
+                    mkdir -p $(Pipeline.Workspace)/.kaniko-docker
+                    echo "{\"auths\":{\"$(containerRegistryFullName)\":{\"username\":\"$(ACR_USERNAME)\",\"password\":\"$(ACR_PASSWORD)\"}}}" > $(Pipeline.Workspace)/.kaniko-docker/config.json
+
+                    # Login to Docker registry
+                    echo "Logging in to Docker registry: $containerRegistryFullName"
+                    docker login $containerRegistryFullName -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+
+                    # Pull Kaniko executor
+                    echo "Pulling Kaniko executor image"
+                    docker pull $containerRegistryFullName/kaniko/executor:latest
+
+                    # Execute Kaniko build
+                    echo "Starting Kaniko build with Dockerfile: $dockerFile"
+                    docker run --rm \
+                      -v $(Pipeline.Workspace)/s:/workspace \
+                      -v $(Pipeline.Workspace)/.kaniko-docker:/kaniko/.docker \
+                      $containerRegistryFullName/kaniko/executor:latest \
+                      --context=/workspace/$context \
+                      --dockerfile=/workspace/$dockerFile \
+                      --destination=$imageTag \
+                      --build-arg=$buildArg
+
+                    echo "Kaniko build completed for service: $service"
     stage: Build
-  - dependsOn:
-      - Build
-    displayName: Deploy demo-app-01
-    stage: template
-    jobs: []
-    parameters:
-      - name: projectName
-        type: string
-      - name: applicationName
-        type: string
-      - name: deployProfileList
-        type: object
-        default: []
-      - name: keyVaultServiceConnection
-        type: string
-        default: cmp-pr-service-principal-ado
-    stages:
-      - ${{ each deployProfile in parameters.deployProfileList }}:
-          - stage: Deploy_${{ replace(deployProfile,'-','_') }}
-            displayName: Deploy ${{ deployProfile }}
-            dependsOn: Build
-            jobs:
-              - deployment: deployWithApprove
-                displayName: Deploy Environments
-                environment: ${{ deployProfile }}
-                variables:
-                  buildTag: "$[stageDependencies.Build.jobBuild.outputs['outputVars.buildTag']]"
-                timeoutInMinutes: 0
-                container:
-                  image: catalina.azurecr.io/cde-deploy-3-12-slim:1.0.3
-                  endpoint: Catalina ACR
-                strategy:
-                  runOnce:
-                    deploy:
-                      steps:
-                        - download: none
-                        - checkout: adoRepository
-                          displayName: Checkout azure-pipelines
-                          path: azure-pipelines
-                        - checkout: argoRepository
-                          displayName: Checkout argo-apps
-                          path: argo-apps
-                          persistCredentials: true
-                          clean: true
-                          fetchDepth: 1
-                        - checkout: applicationRepository
-                          displayName: Checkout src repo
-                        - task: AzureKeyVault@2
-                          name: fetchSecrets
-                          inputs:
-                            azureSubscription: ${{ parameters.keyVaultServiceConnection
-                              }}
-                            KeyVaultName: kv-prd-eastus2-mngmnt
-                            SecretsFilter: envFile
-                            RunAsPreJob: false
-                        - task: Bash@3
-                          displayName: Export envFile from Key Vault to ENV
-                          inputs:
-                            targetType: inline
-                            script: "echo \"Reading envFile from Key Vault...\"\n\
-                              if [ -n \"$envFile\" ]; then\n  # # Export each line\
-                              \ as an env var (with quotes stripped)\n  # echo \"\
-                              $envFile\" | while IFS= read -r line || [ -n \"$line\"\
-                              \ ]; do\n  #   [[ \"$line\" =~ ^[^#]*= ]] || continue\n\
-                              \  #   varName=$(echo \"$line\" | cut -d'=' -f1 | xargs)\n\
-                              \  #   varValue=$(echo \"$line\" | cut -d'=' -f2- |\
-                              \ xargs)\n\n  #   # Remove surrounding quotes\n  # \
-                              \  if [[ \"$varValue\" =~ ^\\\".*\\\"$ ]]; then\n  #\
-                              \     varValue=${varValue:1:-1}\n  #   elif [[ \"$varValue\"\
-                              \ =~ ^\\'.*\\'$ ]]; then\n  #     varValue=${varValue:1:-1}\n\
-                              \  #   fi\n  # FIXME: This is not working as expected\
-                              \ in the next steps it does not shows exported ENV variables\n\
-                              \  #   export \"$varName=$varValue\"\n  #   echo \"\
-                              Exported variable: $varName\"\n  # done\n\n  # Write\
-                              \ the unquoted export statements to env_exports.sh\n\
-                              \  echo \"#!/bin/bash\" > $(Pipeline.Workspace)/env_exports.sh\n\
-                              \  echo \"# Exported environment variables from envFile\"\
-                              \ >> $(Pipeline.Workspace)/env_exports.sh\n\n  echo\
-                              \ \"$envFile\" | while IFS= read -r line || [ -n \"\
-                              $line\" ]; do\n    [[ \"$line\" =~ ^[^#]*= ]] || continue\n\
-                              \    varName=$(echo \"$line\" | cut -d'=' -f1 | xargs)\n\
-                              \    varValue=$(echo \"$line\" | cut -d'=' -f2- | xargs)\n\
-                              \    \n    # Remove surrounding quotes\n    if [[ \"\
-                              $varValue\" =~ ^\\\".*\\\"$ ]]; then\n      varValue=${varValue:1:-1}\n\
-                              \    elif [[ \"$varValue\" =~ ^\\'.*\\'$ ]]; then\n\
-                              \      varValue=${varValue:1:-1}\n    fi\n\n    echo\
-                              \ \"export $varName=$varValue\" >> $(Pipeline.Workspace)/env_exports.sh\n\
-                              \  done\n\n  chmod +x $(Pipeline.Workspace)/env_exports.sh\n\
-                              else\n  echo \"envFile is empty or not found!\"\n  exit\
-                              \ 1\nfi\n"
-                          env:
-                            envFile: $(envFile)
-                        - task: Bash@3
-                          displayName: Execute deployment script
-                          inputs:
-                            targetType: inline
-                            workingDirectory: $(System.DefaultWorkingDirectory)
-                            script: |
-                              echo "[ Env vars ] ==================================================================================================================="
-                              echo "Loading env vars from env_exports.sh"
-                              # cat $(Pipeline.Workspace)/env_exports.sh
-                              source $(Pipeline.Workspace)/env_exports.sh
-                              # env | grep ARGOCD_API_TOKEN_
-                              # echo "ARGOCD_API_TOKEN_AKS_NP_EASTUS_CMP: ***${ARGOCD_API_TOKEN_AKS_NP_EASTUS_CMP: -5}"
-
-                              echo "[ Check content in azure-pipelines/scripts/CMP/ ] =================================================================================="
-                              echo "cd $(System.DefaultWorkingDirectory) <- System.DefaultWorkingDirectory"
-                              cd $(System.DefaultWorkingDirectory)
-                              pwd
-                              ls -la
-                              echo "cd $(Pipeline.Workspace) <- Pipeline.Workspace"
-                              cd $(Pipeline.Workspace)
-                              pwd
-                              ls -la
-                              echo "[ Prepare argo-apps repo ] ========================================================================================================="
-                              cd $(Pipeline.Workspace)/argo-apps
-
-                              # Configure Git user
-                              git config --global user.email "cde@catalina.com"
-                              git config --global user.name "CDE Automation"
-
-                              # Set authenticated remote using System.AccessToken
-                              echo "Updating Git remote to use System.AccessToken"
-                              git remote set-url origin "https://$(System.AccessToken)@dev.azure.com/catalinamarketing/DeliveryEngineering/_git/argo-apps"
-
-                              # Avoid leaking token in logs
-                              echo "Remote origin updated."
-
-                              # Fetch and checkout the desired branch
-                              argoBranchName="static-envs"
-                              git fetch origin $argoBranchName
-                              git checkout $argoBranchName || git checkout -b $argoBranchName origin/$argoBranchName
-                              git pull origin $argoBranchName
-                              git status
-
-                              echo "[ Deploy ] ========================================================================================================================="
-                              # Create a list of key-value pairs
-                              parameters_list=()
-                              #parameters_list+=("helmChartName=$(applicationName)")
-                              parameters_list+=("applicationRepo=$(applicationName)")
-                              parameters_list+=("projectName=$(projectName)")
-                              parameters_list+=("imageTag=$(buildTag)")
-                              parameters_list+=("deployProfile=${{ deployProfile }}")
-                              parameters_list+=("pipelineWorkspace=$(System.DefaultWorkingDirectory)")
-
-                              # Redundant Vars
-                              parameters_list+=("buildId=$(build.buildId)")
-                              parameters_list+=("branchName=$(Build.SourceBranchName)")
-                              parameters_list+=("dynamicEnvTtl=$(dynamicEnvTtl)")
-
-                              case "$(applicationName)" in
-                                cmp-core|eui|partner-api|bulk|retailer-api|job-management-service-front)
-                                  parameters_list+=("pipelineWorkspace=$(System.DefaultWorkingDirectory)")
-                                  ;;
-                                *)
-                                  parameters_list+=("pipelineWorkspace=$(Pipeline.Workspace)")
-                                  ;;
-                              esac
-
-                              # Join the list into a string separated by spaces
-                              parameters_string=$(IFS=' ' ; echo "${parameters_list[*]}")
-                              echo "python3 azure-pipelines/scripts/cde_k8s_deploy.py $parameters_string"
-                              cd $(Pipeline.Workspace)
-                              python3 azure-pipelines/scripts/cde_k8s_deploy.py $parameters_string
