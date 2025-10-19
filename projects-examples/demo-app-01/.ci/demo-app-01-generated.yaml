@@ -1,0 +1,217 @@
+name: demo-app-01
+pool:
+  vmImage: ubuntu-latest
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+parameters:
+  - default:
+      - front
+      - back
+    name: services
+    type: object
+  - default:
+      back:
+        ArtifactsPath: ''
+        BuildArgs: []
+        BuildCommand: pip install -f requirenments.txt
+        DockerfilePath: projects-examples/demo-app-01/backend/Dockerfile
+        KanikoOptions: --cache=true --cache-ttl=24h
+        ServiceName: back
+        ServicePath: projects-examples/demo-app-01/backend
+        ServiceType: python
+        TestCommand: pytest
+      front:
+        ArtifactsPath: ''
+        BuildArgs: []
+        BuildCommand: npm run build
+        DockerfilePath: projects-examples/demo-app-01/frontend/Dockerfile
+        KanikoOptions: --cache=true --cache-ttl=24h
+        ServiceName: front
+        ServicePath: projects-examples/demo-app-01/frontend
+        ServiceType: python
+        TestCommand: npm run test
+    name: servicesConfig
+    type: object
+  - default: $(containerRegistry)
+    name: containerRegistry
+    type: string
+  - default: $(projectName)
+    name: projectName
+    type: string
+  - default: gcr.io/kaniko-project/executor:latest
+    name: kanikoExecutor
+    type: string
+  - default: --cache=true --cache-ttl=24h
+    name: kanikoOptions
+    type: string
+  - default: .
+    description: Default context path - will be overridden by service-specific paths
+      in monorepo
+    name: context
+    type: string
+stages:
+  - displayName: Build and Test
+    jobs:
+      - container:
+          image: golang:1.21-alpine
+        displayName: Go Build Job
+        job: GoBuild
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - displayName: Get Dependencies
+            inputs:
+              script: go mod download
+              targetType: inline
+            task: Bash@3
+          - displayName: Run Tests
+            inputs:
+              script: go test -v ./...
+              targetType: inline
+            task: Bash@3
+          - displayName: Build Application
+            inputs:
+              script: go build -v ./...
+              targetType: inline
+            task: Bash@3
+      - ${{ each service in parameters.services }}:
+          - displayName: Kaniko Build & Push - ${{ service }}
+            job: kaniko_${{ replace(service, '-', '_') }}
+            steps:
+              - displayName: ${{ service }} | Prepare Build Environment
+                inputs:
+                  script: |-
+                    echo "Preparing build environment for service: ${{ service }}"
+                    echo "Service source path: ${{ parameters.servicesConfig.${{ service }}.ServicePath }}"
+                    echo "Service type: ${{ parameters.servicesConfig.${{ service }}.ServiceType }}"
+                  targetType: inline
+                task: Bash@3
+              - task: Bash@3
+                displayName: ${{ service }} | Set Build Variables
+                inputs:
+                  targetType: inline
+                  script: |-
+                    acrRepoName="$(projectName)"
+                    echo "##vso[task.setvariable variable=acrRepoName;isOutput=false]$acrRepoName"
+                    buildArg=""
+                    echo "##vso[task.setvariable variable=buildArg;isOutput=false]$buildArg"
+                    containerRegistryFullName="$(containerRegistry)"
+                    echo "##vso[task.setvariable variable=containerRegistryFullName;isOutput=false]$containerRegistryFullName"
+                    context="${{ parameters.servicesConfig.${{ service }}.ServicePath }}"
+                    echo "##vso[task.setvariable variable=context;isOutput=false]$context"
+                    dockerFile="${{ parameters.servicesConfig.${{ service }}.DockerfilePath }}"
+                    echo "##vso[task.setvariable variable=dockerFile;isOutput=false]$dockerFile"
+                    imageTag="$(containerRegistry)/$(projectName)/${{service}}:$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+                    echo "##vso[task.setvariable variable=imageTag;isOutput=false]$imageTag"
+                    service="${{service}}"
+                    echo "##vso[task.setvariable variable=service;isOutput=false]$service"
+
+                    # Injected script
+                    if [ ${{ service }} == "eui" ]; then
+                      buildArg=ARTIFACTS_PATH=dist
+                      echo "##vso[task.setvariable variable=buildArg]$buildArg"
+                    elif [ ${{ service }} == "eui-kv-config-expander" ]; then
+                      dockerFile="devops/kv-config-expander.Dockerfile"
+                      buildArg="REGISTRY=$containerRegistryFullName"
+                      echo "##vso[task.setvariable variable=dockerFile]$dockerFile"
+                      echo "##vso[task.setvariable variable=buildArg]$buildArg"
+                    fi
+
+                    # Initial debug messages
+
+                    echo "Set variables (initial state)"
+                    echo "acrRepoName: $acrRepoName"
+                    echo "buildArg: $buildArg"
+                    echo "containerRegistryFullName: $containerRegistryFullName"
+                    echo "context: $context"
+                    echo "dockerFile: $dockerFile"
+                    echo "imageTag: $imageTag"
+                    echo "service: $service"
+              - task: Bash@3
+                displayName: ${{ service }} | Create build-info.json
+                inputs:
+                  targetType: inline
+                  script: |
+                    # Create build info JSON file
+
+                    echo "Creating build-info.json for service: $service"
+
+                    # Get current timestamp
+                    BUILD_TIME=$(date '+%Y-%m-%dT%H:%M:%SZ')
+                    BUILD_URL=$SYSTEM_TEAMFOUNDATIONCOLLECTIONURI/$SYSTEM_TEAMPROJECT/_build/results?buildId=$BUILD_BUILDID
+
+                    # Create the directory for build-info.json if it doesn't exist
+                    mkdir -p $(Build.SourcesDirectory)/$context/build-info
+
+                    # Create build-info.json
+                    cat > $(Build.SourcesDirectory)/$context/build-info/build-info.json << EOF
+                    {
+                      "build": {
+                        "id": "$(Build.BuildId)",
+                        "number": "$(Build.BuildNumber)",
+                        "time": "$BUILD_TIME",
+                        "name": "$service",
+                        "url": "$BUILD_URL"
+                      },
+                      "git": {
+                        "branch": "$(Build.SourceBranchName)",
+                        "commit": {
+                          "id": "$(Build.SourceVersion)"
+                        }
+                      },
+                      "image": {
+                        "tag": "$imageTag"
+                      }
+                    }
+                    EOF
+
+                    echo "============ BUILD-INFO.JSON =============="
+                    cat $(Build.SourcesDirectory)/$context/build-info/build-info.json
+                    echo "==========================================="
+              - task: Bash@3
+                displayName: ${{ service }} | Kaniko Build & Push
+                inputs:
+                  targetType: inline
+                  script: |
+                    # Kaniko build and push script for monorepo services
+
+                    echo "Running Kaniko Build & Push for service: $service"
+                    echo "Docker file path: $dockerFile"
+                    echo "Image tag: $imageTag"
+                    echo "Context: $context"
+
+                    # Set up Docker credential helper for Kaniko
+                    mkdir -p $(Pipeline.Workspace)/.kaniko-docker
+                    echo "{\"auths\":{\"$(containerRegistryFullName)\":{\"username\":\"$(ACR_USERNAME)\",\"password\":\"$(ACR_PASSWORD)\"}}}" > $(Pipeline.Workspace)/.kaniko-docker/config.json
+
+                    # Login to Docker registry
+                    echo "Logging in to Docker registry: $containerRegistryFullName"
+                    docker login $containerRegistryFullName -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+
+                    # Pull Kaniko executor
+                    echo "Pulling Kaniko executor image"
+                    docker pull $containerRegistryFullName/kaniko/executor:latest
+
+                    # Execute Kaniko build
+                    echo "Starting Kaniko build with Dockerfile: $dockerFile"
+                    docker run --rm \
+                      -v $(Pipeline.Workspace)/s:/workspace \
+                      -v $(Pipeline.Workspace)/.kaniko-docker:/kaniko/.docker \
+                      $containerRegistryFullName/kaniko/executor:latest \
+                      --context=/workspace/$context \
+                      --dockerfile=/workspace/$dockerFile \
+                      --destination=$imageTag \
+                      --build-arg=$buildArg
+
+                    echo "Kaniko build completed for service: $service"
+    stage: Build
+  - ${{ if contains(variables['Build.SourceBranchName'], 'develop') }}:
+      - parameters:
+          applicationName: ${{ variables.applicationName }}
+          deployProfileList:
+            - demo-app-01-dev
+          projectName: ${{ variables.projectName }}
+        template: stages/cde-stage-cd-approvals-argo.yml@adoRepository
