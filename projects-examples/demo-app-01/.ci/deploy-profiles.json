@@ -1,0 +1,13 @@
+{
+  "demo-app-01": {
+    "demo-app-01-dev": {
+      "clusters": {
+        "minikube-local": {
+          "demo-app-01-dev": {
+            "deployType": "argocd"
+          }
+        }
+      }
+    }
+  }
+}
