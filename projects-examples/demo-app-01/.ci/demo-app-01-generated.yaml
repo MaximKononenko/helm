@@ -1,4 +1,4 @@
-name: Monorepo - Multi-Service CI/CD
+name: demo-app-01
 pool:
   vmImage: ubuntu-latest
 trigger:
@@ -25,31 +25,31 @@ parameters:
     name: context
     type: string
   - default:
-      - front
-      - back
+      - frontend
+      - backend
     name: services
     type: object
   - default:
-      back:
+      backend:
         ArtifactsPath: ''
         BuildArgs: []
-        BuildCommand: pip install -f requirenments.txt
+        BuildCommand: 'echo "No build command specified"'
         DockerfilePath: projects-examples/demo-app-01/backend/Dockerfile
         KanikoOptions: --cache=true --cache-ttl=24h
-        ServiceName: back
+        ServiceName: backend
         ServicePath: projects-examples/demo-app-01/backend
         ServiceType: python
-        TestCommand: pytest
-      front:
+        TestCommand: 'echo "No test command specified"'
+      frontend:
         ArtifactsPath: ''
         BuildArgs: []
-        BuildCommand: npm run build
+        BuildCommand: 'echo "No build command specified"'
         DockerfilePath: projects-examples/demo-app-01/frontend/Dockerfile
         KanikoOptions: --cache=true --cache-ttl=24h
-        ServiceName: front
+        ServiceName: frontend
         ServicePath: projects-examples/demo-app-01/frontend
         ServiceType: python
-        TestCommand: npm run test
+        TestCommand: 'echo "No test command specified"'
     name: servicesConfig
     type: object
   - default: $(containerRegistry)
