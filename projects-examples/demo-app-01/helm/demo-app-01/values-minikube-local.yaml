@@ -1,6 +1,7 @@
 global:
   env: dev
-  imageTag: latest
+  image:
+    tag: latest
   domain: minikube.local
   pullPolicy: IfNotPresent
 frontend:
