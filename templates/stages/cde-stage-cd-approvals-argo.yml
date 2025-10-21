@@ -136,7 +136,7 @@ stages:
                   echo "Remote origin updated."
 
                   # Fetch and checkout the desired branch
-                  argoBranchName="static-envs"
+                  argoBranchName="demo-app-01"
                   git fetch origin $argoBranchName
                   git checkout $argoBranchName || git checkout -b $argoBranchName origin/$argoBranchName
                   git pull origin $argoBranchName
