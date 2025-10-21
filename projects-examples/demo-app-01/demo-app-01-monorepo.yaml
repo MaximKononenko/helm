@@ -1,0 +1,89 @@
+apiVersion: ops-box.io/v1
+kind: AdoPipelineDefinition
+metadata:
+  name: demo-app-01-monorepo
+  namespace: ops-box
+spec:
+  sourceRepository:
+    repoType: monoRepo
+    gitDefinitionName: demo-app-source
+    services:
+      - name: frontend
+        serviceType: react
+        serviceSrcPath: projects-examples/demo-app-01/frontend
+        buildCommand: npm ci && npm run build
+        testCommand: npm test
+        dockerfilePath: projects-examples/demo-app-01/frontend/Dockerfile
+      - name: backend
+        serviceType: python
+        serviceSrcPath: projects-examples/demo-app-01/backend
+        buildCommand: pip install -r requirements.txt
+        testCommand: pytest tests/ --junitxml=test-results.xml
+        dockerfilePath: projects-examples/demo-app-01/backend/Dockerfile
+  pipelineDefinition:
+    name: demo-app-01-monorepo
+    trigger:
+      branches:
+        include:
+          - main
+          - develop
+    parameters:
+      - name: services
+        type: object
+        default:
+          - frontend
+          - backend
+    variables:
+      - name: dockerRegistryServiceConnection
+        value: acr-connection
+      - name: dockerRegistry
+        value: myacr.azurecr.io
+    stages:
+      - stage: Build
+        displayName: Build and Test
+        jobs:
+          - job: ServiceBuild
+            displayName: Build Services
+            loop: services
+            steps:
+              - task: Bash@3
+                displayName: Service Info
+                inputs:
+                  targetType: inline
+                  script: |
+                    echo "Building service: $(ServiceName)"
+                    echo "Path: $(ServicePath)"
+                    echo "Type: $(ServiceType)"
+              
+              # Build and test service
+              - task: injectScript
+                displayName: Build $(ServiceName)
+                scriptPath: helm/templates/scripts/build_$(ServiceType).sh
+                
+              # Set variables for Kaniko build
+              - task: setVars
+                displayName: $(ServiceName) | Set Build Variables
+                vars:
+                  service: "$(ServiceName)"
+                  acrRepoName: "demo-app"
+                  dockerFile: "$(DockerfilePath)"
+                  imageTag: "$(dockerRegistry)/demo-app/$(ServiceName):$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+                  context: "$(ServicePath)"
+                  containerRegistryFullName: "$(dockerRegistry)"
+                  buildArg: "SERVICE_PATH=$(ServicePath)"
+                injectScript: "helm/templates/scripts/set_build_vars.sh"
+                
+              # Create build info JSON
+              - task: injectScript
+                displayName: $(ServiceName) | Create build-info.json
+                scriptPath: "helm/templates/scripts/create_build_info.sh"
+              
+              # Kaniko Build & Push
+              - task: injectScript
+                displayName: $(ServiceName) | Kaniko Build & Push
+                scriptPath: "helm/templates/scripts/kaniko_build_push.sh"
+      - stage: template
+        baseTemplate: stages/cde-stage-cd-approvals-argo.yml
+        displayName: Deploy demo-app-01
+        dependsOn:
+          - Build

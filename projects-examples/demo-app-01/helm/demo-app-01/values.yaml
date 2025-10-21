@@ -1,0 +1,45 @@
+global:
+  env: dev
+  imageTag: latest
+  domain: example.com
+frontend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: demo-app-01/frontend
+    tag: "" # Uses global.imageTag if not set
+  service:
+    type: ClusterIP
+    port: 80
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+    hosts:
+      - host: frontend.local
+        paths:
+          - path: /
+            pathType: Prefix
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+backend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: demo-app-01/backend
+    tag: "" # Uses global.imageTag if not set
+  service:
+    type: ClusterIP
+    port: 5000
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi

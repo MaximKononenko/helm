@@ -9,6 +9,7 @@ spec:
   repository:
     url: https://github.com/MaximKononenko/helm.git
     defaultBranch: test-k8s-ops-box-resources
+    endpoint: demo-app-01-src
   purposes:
     source:
       enabled: true

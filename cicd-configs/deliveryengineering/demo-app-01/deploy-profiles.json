@@ -1,0 +1,14 @@
+{
+  "demo-app-01": {
+    "demo-app-01-dev": {
+      "clusters": {
+        "aks-prd-eastus2-mngmnt": {
+          "demo-app-01-dev": {
+            "deployType": "argocd",
+            "namespace": "demo-app-01"
+          }
+        }
+      }
+    }
+  }
+}

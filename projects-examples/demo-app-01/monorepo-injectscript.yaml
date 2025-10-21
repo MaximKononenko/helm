@@ -1,0 +1,66 @@
+apiVersion: ops-box.io/v1
+kind: AdoPipelineDefinition
+metadata:
+  name: monorepo-example-injectscript
+  namespace: ops-box
+spec:
+  sourceRepository:
+    repoType: monoRepo
+    gitDefinitionName: demo-app-source
+    services:
+      - name: frontend
+        serviceType: react
+        serviceSrcPath: projects-examples/demo-app-01/frontend
+        buildCommand: npm ci && npm run build
+        testCommand: npm test
+        dockerfilePath: projects-examples/demo-app-01/frontend/Dockerfile
+      - name: backend
+        serviceType: python
+        serviceSrcPath: projects-examples/demo-app-01/backend
+        buildCommand: pip install -r requirements.txt
+        testCommand: pytest tests/
+        dockerfilePath: projects-examples/demo-app-01/backend/Dockerfile
+  pipelineDefinition:
+    name: monorepo-pipeline-injectscript
+    trigger:
+      branches:
+        include:
+          - main
+          - develop
+    parameters:
+      - name: services
+        type: object
+        default:
+          - frontend
+          - backend
+    variables:
+      - name: dockerRegistryServiceConnection
+        value: acr-connection
+      - name: dockerRegistry
+        value: myacr.azurecr.io
+    stages:
+      - stage: Build
+        displayName: Build and Test Services
+        jobs:
+          - job: BuildServices
+            displayName: Build Services
+            loop: services
+            steps:
+              - task: Bash@3
+                displayName: Service Info
+                inputs:
+                  targetType: inline
+                  script: |
+                    echo "Building service: $(ServiceName)"
+                    echo "Path: $(ServicePath)"
+                    echo "Type: $(ServiceType)"
+              - task: injectScript
+                displayName: Build and Test $(ServiceName)
+                scriptPath: helm/templates/scripts/build_$(ServiceType).sh
+              - task: injectScript
+                displayName: Kaniko Build and Push
+                scriptPath: helm/templates/scripts/kaniko_build_push.sh
+                parameters:
+                  serviceName: $(ServiceName)
+                  dockerfilePath: $(DockerfilePath)
+                  imageTag: $(dockerRegistry)/$(ServiceName):latest
