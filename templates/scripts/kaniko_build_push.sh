@@ -8,11 +8,11 @@ echo "Context: $context"
 
 # Set up Docker credential helper for Kaniko
 mkdir -p $(Pipeline.Workspace)/.kaniko-docker
-echo "{\"auths\":{\"$(containerRegistryFullName)\":{\"username\":\"$(ACR_USERNAME)\",\"password\":\"$(ACR_PASSWORD)\"}}}" > $(Pipeline.Workspace)/.kaniko-docker/config.json
+echo "{\"auths\":{\"$(containerRegistryFullName)\":{\"username\":\"$(global.acrUsername)\",\"password\":\"$(global.acrPasswd)\"}}}" > $(Pipeline.Workspace)/.kaniko-docker/config.json
 
 # Login to Docker registry
 echo "Logging in to Docker registry: $containerRegistryFullName"
-docker login $containerRegistryFullName -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+docker login $containerRegistryFullName -u $(global.acrUsername) -p $(global.acrPasswd)
 
 # Pull Kaniko executor
 echo "Pulling Kaniko executor image"
