@@ -1,0 +1,219 @@
+apiVersion: ops-box.io/v1
+kind: AdoPipelineDefinition
+metadata:
+  name: job-management-service-front
+  namespace: ops-box
+status:
+  exportedArtifacts:
+    deployProfiles:
+      commitSha: 4726d72adfbdd2fe0833a34cc86c2e11eb958502
+      error: Failed to clone output repository
+      exported: true
+      gitDefinition: job-management-service-front
+      path: .ci/deployment-profiles.json
+    pipeline:
+      commitSha: 867873924524968dc3b4bec7dd9d3261805dd841
+      error: Failed to clone output repository
+      exported: true
+      gitDefinition: job-management-service-front
+      path: .ci/job-management-service-front-generated.yaml
+  message: Successfully exported 1 artifact(s)
+  phase: Exported
+spec:
+  cdConfig:
+    createSeparateStages: false
+    enabled: true
+    helmChartName: etl-fe
+    profiles:
+      - approvalRequired: false
+        argoAppsRepoBranch: static-envs
+        cluster: aks-prd-eastus2-mngmnt
+        deployType: argocd
+        environment: dev
+        isDynamicName: false
+        isTemporary: false
+        name: dev
+        namespace: etl-fe-dev
+        temporaryEnvTtl: 7
+      - approvalRequired: false
+        argoAppsRepoBranch: static-envs
+        cluster: aks-prd-eastus2-mngmnt
+        deployType: argocd
+        environment: dev
+        isDynamicName: false
+        isTemporary: false
+        name: develop
+        namespace: etl-fe-develop
+        temporaryEnvTtl: 7
+    targetPipeline: ''
+    templatePath: stages/cde-stage-cd-approvals-argo.yml@adoRepository
+    triggers:
+      - approvalRequired: false
+        condition: dev
+        matchType: contains
+        name: dev-branch
+        profileNames:
+          - dev
+      - approvalRequired: false
+        condition: develop
+        matchType: contains
+        name: develop-branch
+        profileNames:
+          - develop
+  ciConfig:
+    enabled: false
+  draft: false
+  outputs:
+    deployProfiles:
+      gitDefinitionName: job-management-service-front
+      path: .ci/deployment-profiles.json
+    pipeline:
+      gitDefinitionName: job-management-service-front
+      path: .ci/job-management-service-front-generated.yaml
+  pipelineDefinition:
+    name: job-management-service-front
+    parameters: []
+    pool: vmss-pr-eastus2-ado-cmp
+    resources:
+      repositories:
+        - name: eu_etl_kotlin/job-management-service-front
+          ref: $(Build.SourceBranch)
+          repository: applicationRepository
+          trigger:
+            - develop
+          type: git
+        - name: DeliveryEngineering/argo-apps
+          ref: static-envs
+          repository: argoRepository
+          type: git
+        - name: DeliveryEngineering/azure-pipelines
+          ref: main
+          repository: adoRepository
+          type: git
+        - name: DeliveryEngineering/devops-k8s
+          ref: master
+          repository: Deliveryrepository
+          type: git
+    stages:
+      - baseTemplate: azure-pipelines/stages/cde-stage-ci-default.yml
+        displayName: CI
+        jobs:
+          - baseTemplate: azure-pipelines/jobs/cde-job-ci-build-default.yml
+            container:
+              endpoint: Catalina ACR
+              image: nodejs:23.4.0
+              mapDockerSocket: true
+            displayName: Build Job
+            job: template
+            steps:
+              - displayName: Set Output Variables
+                isOutput: true
+                name: outputVars
+                task: setVars
+                vars:
+                  buildTag: >-
+                    $(echo $(basename $(Build.SourceBranch)).$(build.buildId) |
+                    tr '[:upper:]' '[:lower:]')
+          - dependsOn:
+              - jobBuild
+            displayName: Kaniko Build & Push
+            job: kaniko_build_push
+            steps:
+              - displayName: job-management-service-front | Set Build Variables
+                injectScript: azure-pipelines/variables/cde-vars-eui-build-conditions.yml
+                task: setVars
+                vars:
+                  buildArg: NEXT_PUBLIC_API_BASE_URL=$(NEXT_PUBLIC_API_BASE_URL)
+                  containerRegistryFullName: catalina.azurecr.io
+                  context: $(context)
+                  dockerFile: jobmanagement/Dockerfile
+                  imageTag: >-
+                    catalina.azurecr.io/$(projectName)/job-management-service-front:$(echo
+                    $(basename $(Build.SourceBranch)).$(build.buildId) | tr
+                    '[:upper:]' '[:lower:]')
+                  tag: >-
+                    $(echo $(basename $(Build.SourceBranch)).$(build.buildId) |
+                    tr '[:upper:]' '[:lower:]')
+              - displayName: Kaniko Build & Push
+                scriptPath: azure-pipelines/scripts/CMP/kaniko_build_push.sh
+                task: injectScript
+        stage: template
+      - displayName: SonarScan
+        jobs:
+          - container:
+              endpoint: Catalina ACR
+              image: 'catalina.azurecr.io/sonar-scaner: 5.0.1'
+              mapDockerSocket: true
+            continueOnError: false
+            displayName: Run SonarCloud Scan
+            job: SonarCloudScan
+            steps:
+              - checkout: applicationRepository
+                clean: true
+                displayName: Checkout
+                persistCredentials: true
+              - displayName: Sonar Scan
+                enabled: true
+                inputs:
+                  script: >
+                    cd jobmanagement
+
+                    sonar-scanner -Dsonar.branch.name=$(Build.SourceBranchName)
+                    -Dsonar.token=$(global.sonarToken)
+                  targetType: inline
+                task: Bash@3
+        stage: sonarScan
+      - condition: ${{ if startsWith(variables['Build.SourceBranchName'], 'release_') }}
+        items:
+          - parameters:
+              applicationName: ${{ variables.applicationName }}
+              deployProfileList:
+                - etl-fe-prd
+              keyVaultServiceConnection: ${{ variables.keyVaultServiceConnection }}
+              projectName: ${{ variables.projectName }}
+            template: stages/cde-stage-cd-approvals-argo.yml@adoRepository
+      - condition: ${{ elseif contains(variables['Build.SourceBranchName'], 'develop') }}
+        items:
+          - parameters:
+              applicationName: ${{ variables.applicationName }}
+              deployProfileList:
+                - etl-fe-dev
+              keyVaultServiceConnection: ${{ variables.keyVaultServiceConnection }}
+              projectName: ${{ variables.projectName }}
+            template: stages/cde-stage-cd-approvals-argo.yml@adoRepository
+    trigger:
+      batch: true
+      branches:
+        include:
+          - main
+          - release
+          - develop
+          - dev
+    variables:
+      - group: devops-credentials
+      - name: applicationName
+        value: job-management-service-front
+      - name: keyVaultServiceConnection
+        value: kv-prd-eastus2-mngmnt
+      - name: dockerFile
+        value: Dockerfile
+      - name: containerRegistry
+        value: Catalina ACR
+      - name: context
+        value: ./jobmanagement
+      - name: dynamicEnvTtl
+        value: default
+      - group: ACR Catalina
+      - name: projectName
+        value: etl
+      - name: NEXT_PUBLIC_API_BASE_URL_PRD
+        value: https://etl-bff.catmktg.com
+      - name: NEXT_PUBLIC_API_BASE_URL
+        value: https://etl-bff-dev.catmktg.com
+  sourceRepository:
+    gitDefinitionName: job-management-service-front
+  templatesSource:
+    basePath: /
+    gitDefinitionName: azure-pipelines
+  testConfig:
+    enabled: false
