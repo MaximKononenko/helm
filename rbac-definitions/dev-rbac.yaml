@@ -11,7 +11,7 @@ spec:
   customRoles:
     - name: dev-pod-viewer
       clusterScope: false
-      targetNamespaces: ["default", "development"]
+      targetNamespaces: ["default", "ops-box"]
       rules:
         - apiGroups: [""]
           resources: ["pods", "pods/log"]
@@ -27,4 +27,4 @@ spec:
           name: dev-team
       roleBindings:
         - role: dev-pod-viewer
-          targetNamespaces: ["default", "development"]
+          targetNamespaces: ["default", "ops-box"]

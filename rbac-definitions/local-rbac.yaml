@@ -1,30 +1,33 @@
+---
 apiVersion: ops-box.io/v1
 kind: RBACDefinition
 metadata:
-  name: staging-rbac
+  name: local-rbac
   namespace: ops-box
 spec:
   targetNamespace: "default"
   static: true
   deployedBy: "gitops-sync"
-  # Custom roles for staging environment
+  
+  # Custom roles for local development
   customRoles:
-    - name: staging-deployer
+    - name: local-dev-viewer
       clusterScope: false
-      targetNamespaces: ["default", "staging"]
+      targetNamespaces: ["default", "ops-box"]
       rules:
+        - apiGroups: [""]
+          resources: ["pods", "pods/log", "services"]
+          verbs: ["get", "list", "watch"]
         - apiGroups: ["apps"]
           resources: ["deployments", "replicasets"]
-          verbs: ["get", "list", "watch", "create", "update", "patch"]
-        - apiGroups: [""]
-          resources: ["pods", "services"]
           verbs: ["get", "list", "watch"]
+  
   # RBAC bindings
   rbacBindings:
-    - name: staging-team-bindings
+    - name: local-devs
       subjects:
         - kind: Group
-          name: staging-team
+          name: local-developers
       roleBindings:
-        - role: staging-deployer
-          targetNamespaces: ["default", "staging"]
+        - role: local-dev-viewer
+          targetNamespaces: ["default", "ops-box"]
