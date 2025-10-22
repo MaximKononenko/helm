@@ -1,7 +1,7 @@
 apiVersion: ops-box.io/v1
 kind: CronDefinition
 metadata:
-  name: minikube-local-backup
+  name: backup-simulation
   namespace: ops-box
 spec:
   jobType: bash
