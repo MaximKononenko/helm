@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM catalina.azurecr.io/python:3.12-slim
 
 WORKDIR /app
 

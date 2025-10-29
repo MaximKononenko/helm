@@ -136,49 +136,30 @@
         <div class="hero-background"></div>
     </section>
 
-    <!-- Features Section - Welcome Carousel -->
+    <!-- Features Section - Embedded Presentation -->
     <section id="features" class="features">
         <div class="container">
             <div class="section-header">
                 <h2 class="section-title">Welcome to ops-box</h2>
                 <p class="section-subtitle">Transforming Kubernetes Operations</p>
             </div>
-            <div class="welcome-carousel" id="welcome-carousel">
-                <div class="carousel-container">
-                    <!-- First slide - explicitly styled for initial visibility -->
-                    <div class="carousel-slide active" id="slide1" style="display: block; visibility: visible; opacity: 1;">
-                        <div class="slide-content" style="display: flex; flex-direction: row; align-items: center;">
-                            <div class="slide-text" style="flex: 0 0 40%; padding-right: 20px; padding-top: 30px; padding-bottom: 30px;">
-                                <h3 style="font-size: 1.8em; margin-bottom: 20px;">Sound familiar?</h3>
-                                <p style="font-size: 1.2em; margin-bottom: 16px;">Your business needs to scale, but you want to save on delivery costs.</p>
-                                <p style="font-size: 1.2em; margin-bottom: 16px;">Balancing growing demands with infrastructure optimization can be overwhelming.</p>
-                            </div>
-                            <div class="slide-image" style="flex: 0 0 60%;">
-                                <img src="img/slide1.png" alt="Business scaling challenges" style="max-height: 370px; width: auto; object-fit: contain; cursor: pointer; display: block; margin: 0 auto;" class="clickable-slide-image" onclick="openImageModal(this)">
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Second slide - explicitly styled for initial hiding -->
-                    <div class="carousel-slide" id="slide2" style="display: none; visibility: hidden; opacity: 0;">
-                        <div class="slide-content" style="display: flex; flex-direction: row; align-items: center;">
-                            <div class="slide-text" style="flex: 0 0 40%; padding-right: 20px; padding-top: 30px; padding-bottom: 30px;">
-                                <h3 style="font-size: 1.8em; margin-bottom: 20px;">Meet ops-box</h3>
-                                <p style="font-size: 1.2em; margin-bottom: 16px;">ops-box is an extensible Kubernetes platform which converts your operations into basic requests, automates infrastructure and code delivery in minutes.</p>
-                                <p style="font-size: 1.2em; margin-bottom: 16px;">AI & GitOps friendly, keep your DevOps aura on a senior level regardless of your experience. Hold tight!</p>
-                            </div>
-                            <div class="slide-image" style="flex: 0 0 60%;">
-                                <img src="img/slide2.png" alt="Ops-box solution" style="max-height: 370px; width: auto; object-fit: contain; cursor: pointer; display: block; margin: 0 auto;" class="clickable-slide-image" onclick="openImageModal(this)">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="slider-controls">
-                    <button class="slider-btn prev" id="prevBtn">‹</button>
-                    <div class="slider-dots">
-                        <span class="slider-dot active" data-slide="0"></span>
-                        <span class="slider-dot" data-slide="1"></span>
-                    </div>
-                    <button class="slider-btn next" id="nextBtn">›</button>
+            <div style="display: flex; justify-content: center; padding: 40px 0;">
+                <div style="position: relative; display: inline-block;">
+                    <iframe 
+                        id="opsBoxPresentation"
+                        src="https://gamma.app/embed/4hyim9rejs1ynqz" 
+                        style="width: 1050px; max-width: 100%; height: 675px; border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);" 
+                        allow="fullscreen" 
+                        title="Ops-Box Platform"
+                        allowfullscreen>
+                    </iframe>
+                    <button 
+                        onclick="document.getElementById('opsBoxPresentation').requestFullscreen()"
+                        style="position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.7); color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-size: 14px; z-index: 10; transition: background 0.3s;"
+                        onmouseover="this.style.background='rgba(0, 0, 0, 0.9)'"
+                        onmouseout="this.style.background='rgba(0, 0, 0, 0.7)'">
+                        ⛶ Fullscreen
+                    </button>
                 </div>
             </div>
             <div class="features-grid" id="features-grid">
