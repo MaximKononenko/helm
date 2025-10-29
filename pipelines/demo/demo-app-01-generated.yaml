@@ -1,0 +1,250 @@
+name: da1
+pool: vmss-pr-eastus2-ado-cmp
+trigger:
+  batch: true
+  branches:
+    include:
+      - main
+      - demo-app-01
+variables:
+  - group: devops-credentials
+  - group: ACR Catalina
+  - name: projectName
+    value: cmp
+  - name: dockerFile
+    value: devops/Dockerfile
+  - name: containerRegistryFullName
+    value: catalina.azurecr.io
+  - name: containerRegistry
+    value: Catalina ACR
+  - name: context
+    value: .
+  - name: dynamicEnvTtl
+    value: default
+  - name: applicationName
+    value: da1
+resources:
+  repositories:
+    - repository: adoRepository
+      type: git
+      name: DeliveryEngineering/azure-pipelines
+      ref: demo-app-01
+    - repository: argoRepository
+      type: git
+      name: DeliveryEngineering/argo-apps
+      ref: static-envs
+    - repository: applicationRepository
+      type: github
+      name: MaximKononenko/helm
+      ref: develop
+      endpoint: demo-app-01-src
+parameters:
+  - name: services
+    type: object
+    default:
+      - frontend
+      - backend
+  - name: servicesConfig
+    type: object
+    default:
+      backend:
+        ArtifactsPath: ''
+        BuildArgs: []
+        BuildCommand: 'echo "No build command specified"'
+        DockerfilePath: projects-examples/demo-app-01/backent/Dockerfile
+        KanikoOptions: --cache=true --cache-ttl=24h
+        ServiceName: backend
+        ServicePath: projects-examples/demo-app-01/backend
+        ServiceType: python
+        TestCommand: 'echo "No test command specified"'
+      frontend:
+        ArtifactsPath: ''
+        BuildArgs: []
+        BuildCommand: 'echo "No build command specified"'
+        DockerfilePath: projects-examples/demo-app-01/frontend/Dockerfile
+        KanikoOptions: --cache=true --cache-ttl=24h
+        ServiceName: frontend
+        ServicePath: projects-examples/demo-app-01/frontend
+        ServiceType: python
+        TestCommand: 'echo "No test command specified"'
+  - name: containerRegistry
+    type: string
+    default: $(containerRegistry)
+  - name: projectName
+    type: string
+    default: $(projectName)
+  - name: kanikoExecutor
+    type: string
+    default: gcr.io/kaniko-project/executor:latest
+  - name: kanikoOptions
+    type: string
+    default: --cache=true --cache-ttl=24h
+  - name: context
+    type: string
+    default: .
+stages:
+  - stage: Build
+    displayName: Build Stage
+    jobs:
+      - job: jobBuild
+        displayName: Build Job
+        steps:
+          - task: Bash@3
+            displayName: Set Output Variables
+            inputs:
+              targetType: inline
+              script: |-
+                buildTag="$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+                echo "##vso[task.setvariable variable=buildTag;isOutput=true]$buildTag"
+
+                # Initial debug messages
+
+                echo "Set variables (initial state)"
+                echo "buildTag: $buildTag"
+            name: outputVars
+      - ${{ each service in parameters.services }}:
+          - job: kaniko_${{ replace(service, '-', '_') }}
+            displayName: Kaniko Build & Push - ${{ service }}
+            steps:
+              - checkout: applicationRepository
+                displayName: Checkout Source Code
+              - task: Bash@3
+                displayName: ${{ service }} | Prepare Build Environment
+                inputs:
+                  script: |-
+                    echo "Preparing build environment for service: ${{ service }}"
+                    echo "Service source path: ${{ parameters.servicesConfig[service].ServicePath }}"
+                    echo "Service type: ${{ parameters.servicesConfig[service].ServiceType }}"
+                  targetType: inline
+              - task: Bash@3
+                displayName: ${{ service }} | Set Build Variables
+                inputs:
+                  targetType: inline
+                  script: |-
+                    acrRepoName="$(projectName)"
+                    echo "##vso[task.setvariable variable=acrRepoName;isOutput=false]$acrRepoName"
+                    buildArg=""
+                    echo "##vso[task.setvariable variable=buildArg;isOutput=false]$buildArg"
+                    containerRegistryFullName="$(containerRegistryFullName)"
+                    echo "##vso[task.setvariable variable=containerRegistryFullName;isOutput=false]$containerRegistryFullName"
+                    context="${{ parameters.servicesConfig[service].ServicePath }}"
+                    echo "##vso[task.setvariable variable=context;isOutput=false]$context"
+                    dockerFile="${{ parameters.servicesConfig[service].DockerfilePath }}"
+                    echo "##vso[task.setvariable variable=dockerFile;isOutput=false]$dockerFile"
+                    imageTag="$(containerRegistryFullName)/$(projectName)/${{service}}:$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+                    echo "##vso[task.setvariable variable=imageTag;isOutput=false]$imageTag"
+                    service="${{service}}"
+                    echo "##vso[task.setvariable variable=service;isOutput=false]$service"
+
+                    # Injected script
+                    # Service-specific build conditions for demo-app-01
+                    # Add any custom build arguments or dockerfile overrides per service here
+
+                    # Example:
+                    # if [ "${{ service }}" == "frontend" ]; then
+                    #   buildArg="NODE_ENV=production"
+                    #   echo "##vso[task.setvariable variable=buildArg]$buildArg"
+                    # elif [ "${{ service }}" == "backend" ]; then
+                    #   buildArg="PYTHON_VERSION=3.11"
+                    #   echo "##vso[task.setvariable variable=buildArg]$buildArg"
+                    # fi
+
+                    # No special conditions needed for demo-app-01 services
+                    echo "No service-specific build conditions for ${{ service }}"
+
+
+                    # Initial debug messages
+
+                    echo "Set variables (initial state)"
+                    echo "acrRepoName: $acrRepoName"
+                    echo "buildArg: $buildArg"
+                    echo "containerRegistryFullName: $containerRegistryFullName"
+                    echo "context: $context"
+                    echo "dockerFile: $dockerFile"
+                    echo "imageTag: $imageTag"
+                    echo "service: $service"
+              - task: Bash@3
+                displayName: ${{ service }} | Create build-info.json
+                inputs:
+                  targetType: inline
+                  script: |
+                    # Create build info JSON file
+
+                    echo "Creating build-info.json for service: $(service)"
+
+                    # Get current timestamp
+                    BUILD_TIME=$(date '+%Y-%m-%dT%H:%M:%SZ')
+                    BUILD_URL=$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)
+
+                    # Create the directory for build-info.json if it doesn't exist
+                    mkdir -p $(Build.SourcesDirectory)/$(context)/build-info
+
+                    # Create build-info.json
+                    cat > $(Build.SourcesDirectory)/$(context)/build-info/build-info.json << EOF
+                    {
+                      "build": {
+                        "id": "$(Build.BuildId)",
+                        "number": "$(Build.BuildNumber)",
+                        "time": "$BUILD_TIME",
+                        "name": "$(service)",
+                        "url": "$BUILD_URL"
+                      },
+                      "git": {
+                        "branch": "$(Build.SourceBranchName)",
+                        "commit": {
+                          "id": "$(Build.SourceVersion)"
+                        }
+                      },
+                      "image": {
+                        "tag": "$(imageTag)"
+                      }
+                    }
+                    EOF
+
+                    echo "============ BUILD-INFO.JSON =============="
+                    cat $(Build.SourcesDirectory)/$(context)/build-info/build-info.json
+                    echo "==========================================="
+              - task: Bash@3
+                displayName: ${{ service }} | Kaniko Build & Push
+                inputs:
+                  targetType: inline
+                  script: |
+                    # Kaniko build and push script for monorepo services
+
+                    echo "Running Kaniko Build & Push for service: $(service)"
+                    echo "Docker file path: $(dockerFile)"
+                    echo "Image tag: $(imageTag)"
+                    echo "Context: $(context)"
+                    echo "Build args: $(buildArg)"
+
+                    # Set up Docker credential helper for Kaniko
+                    mkdir -p $(Pipeline.Workspace)/.kaniko-docker
+                    echo "{\"auths\":{\"$(containerRegistryFullName)\":{\"username\":\"$(global.acrUsername)\",\"password\":\"$(global.acrPasswd)\"}}}" > $(Pipeline.Workspace)/.kaniko-docker/config.json
+
+                    # Login to Docker registry
+                    echo "Logging in to Docker registry: $(containerRegistryFullName)"
+                    docker login $(containerRegistryFullName) -u $(global.acrUsername) -p $(global.acrPasswd)
+
+                    # Pull Kaniko executor
+                    echo "Pulling Kaniko executor image"
+                    docker pull $(containerRegistryFullName)/kaniko/executor:latest
+
+                    # Execute Kaniko build
+                    echo "Starting Kaniko build with Dockerfile: $(dockerFile)"
+                    docker run --rm \
+                      -v $(Pipeline.Workspace)/s:/workspace \
+                      -v $(Pipeline.Workspace)/.kaniko-docker:/kaniko/.docker \
+                      $(containerRegistryFullName)/kaniko/executor:latest \
+                      --context=/workspace/$(context) \
+                      --dockerfile=/workspace/$(dockerFile) \
+                      --destination=$(imageTag) \
+                      --build-arg=$(buildArg)
+
+                    echo "Kaniko build completed for service: $(service)"
+  - ${{ if contains(variables['Build.SourceBranchName'], 'demo-app-01') }}:
+      - template: stages/cde-stage-cd-approvals-argo.yml@adoRepository
+        parameters:
+          applicationName: ${{ variables.applicationName }}
+          deployProfileList:
+            - demo-app-dev
+          projectName: ${{ variables.projectName }}
