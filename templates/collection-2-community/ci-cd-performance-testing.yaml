@@ -1,0 +1,255 @@
+apiVersion: ops-box.io/v1
+kind: AdoPipelineDefinition
+metadata:
+  name: ci-cd-performance-testing
+  labels:
+    ops-box.io/template: "true"
+    ops-box.io/collection: "community"
+    ops-box.io/template-type: "pipeline-template"
+    ops-box.io/pattern: "ci-cd-performance"
+    ops-box.io/complexity: "advanced"
+    ops-box.io/build-tool: "kaniko"
+    ops-box.io/language: "any"
+    ops-box.io/type: "singleService"
+    ops-box.io/features: "performance-testing.load-testing.k6.smoke-tests"
+  annotations:
+    description: |
+      CI/CD pipeline with integrated performance and load testing.
+      Includes unit tests, integration tests, and k6 load tests.
+      Runs smoke tests after deployment, full load tests on-demand.
+      Ideal for API services requiring performance validation.
+    ops-box.io/placeholders: '[{"name":"PIPELINE_NAME","wizardStep":"project","displayName":"Pipeline Name","description":"Unique name for the pipeline","required":true,"scope":"global"},{"name":"OB_SOURCE_GIT_DEFINITION","wizardStep":"ci","displayName":"Source Repository","description":"GitDefinition name for source code (auto-filled from wizard)","required":true,"scope":"global","crField":"spec.sourceRepository.gitDefinitionName"},{"name":"OB_TEMPLATES_GIT_DEFINITION","wizardStep":"ci","displayName":"Templates Repository","description":"GitDefinition name for pipeline templates (auto-filled from wizard)","required":true,"scope":"global","crField":"spec.templatesSource.gitDefinitionName"},{"name":"TEMPLATES_BASE_PATH","wizardStep":"ci","displayName":"Templates Base Path","description":"Base path in templates repository","required":false,"scope":"global"},{"name":"OB_TRIGGER_BRANCHES","wizardStep":"ci","displayName":"Trigger Branches","description":"Branches that trigger pipeline (comma-separated) (auto-filled from wizard)","required":false,"scope":"global","crField":"spec.ciConfig.trigger.branches.include"},{"name":"OB_BUILD_COMMAND","wizardStep":"ci","displayName":"Build Command","description":"Command to build the application (auto-filled from wizard)","required":true,"scope":"per-service","crField":"spec.sourceRepository.services[].buildCommand"},{"name":"UNIT_TEST_COMMAND","wizardStep":"tests","displayName":"Unit Test Command","description":"Command to run unit tests","required":true,"scope":"global"},{"name":"INTEGRATION_TEST_COMMAND","wizardStep":"tests","displayName":"Integration Test Command","description":"Command to run integration tests","required":false,"scope":"global"},{"name":"K6_SCRIPT_PATH","wizardStep":"tests","displayName":"K6 Script Path","description":"Path to k6 load test script","required":false,"scope":"global"},{"name":"LOAD_TEST_DURATION","wizardStep":"tests","displayName":"Load Test Duration","description":"Duration for load tests (e.g., ''5m'')","required":false,"scope":"global"},{"name":"LOAD_TEST_VUS","wizardStep":"tests","displayName":"Load Test Virtual Users","description":"Number of virtual users for load test","required":false,"scope":"global"},{"name":"PERFORMANCE_THRESHOLD_P95","wizardStep":"tests","displayName":"P95 Response Time Threshold","description":"Maximum acceptable P95 response time (ms)","required":false,"scope":"global"},{"name":"OB_DOCKERFILE_PATH","wizardStep":"ci","displayName":"Dockerfile Path","description":"Path to Dockerfile (auto-filled from wizard)","required":false,"scope":"per-service","crField":"spec.sourceRepository.services[].dockerfilePath"},{"name":"OB_CONTAINER_REGISTRY","wizardStep":"ci","displayName":"Container Registry","description":"Container registry URL (auto-filled from wizard)","required":false,"scope":"global","crField":"spec.buildConfig.containerRegistry"},{"name":"OB_PROJECT_NAME","wizardStep":"project","displayName":"Project Name","description":"Project name for image tagging (auto-filled from wizard)","required":false,"scope":"global","crField":"spec.projectSetup.projectName"},{"name":"OB_SERVICE_NAME","wizardStep":"ci","displayName":"Service Name","description":"Service name for image tagging (auto-filled from wizard)","required":false,"scope":"per-service","crField":"spec.sourceRepository.services[].name"},{"name":"DEPLOY_ENVIRONMENT","wizardStep":"cd","displayName":"Deployment Environment","description":"Target environment (dev, staging, prod)","required":true,"scope":"global"},{"name":"CLUSTER_DEFINITION","wizardStep":"cd","displayName":"Cluster Definition","description":"ClusterDefinition name for deployment","required":true,"scope":"global"},{"name":"HELM_CHART_PATH","wizardStep":"cd","displayName":"Helm Chart Path","description":"Path to Helm chart","required":false,"scope":"global"},{"name":"SERVICE_URL","wizardStep":"cd","displayName":"Service URL","description":"Service URL for testing","required":false,"scope":"global"},{"name":"OB_OUTPUT_GIT_DEFINITION","wizardStep":"output","displayName":"Output Repository","description":"GitDefinition name for pipeline output","required":true,"scope":"global","type":"gitdefinition","gitPurpose":"output","crField":"spec.outputs.pipeline.gitDefinitionName"}]'
+spec:
+  draft: false
+  sourceRepository:
+    gitDefinitionName: "{{OB_SOURCE_GIT_DEFINITION}}"
+  templatesSource:
+    gitDefinitionName: "{{OB_TEMPLATES_GIT_DEFINITION}}"
+    basePath: "{{TEMPLATES_BASE_PATH}}"
+  pipelineDefinition:
+    name: "{{PIPELINE_NAME}}"
+    trigger:
+      branches:
+        include: "{{OB_TRIGGER_BRANCHES}}"
+    pool:
+      vmImage: ubuntu-latest
+    variables:
+      - name: containerRegistry
+        value: "{{OB_CONTAINER_REGISTRY}}"
+      - name: projectName
+        value: "{{OB_PROJECT_NAME}}"
+      - name: serviceName
+        value: "{{OB_SERVICE_NAME}}"
+      - name: deployEnvironment
+        value: "{{DEPLOY_ENVIRONMENT}}"
+      - name: serviceUrl
+        value: "{{SERVICE_URL}}"
+    resources:
+      repositories:
+        - repository: adoRepository
+          type: git
+          name: "{{OB_TEMPLATES_GIT_DEFINITION}}"
+    stages:
+      # Stage 1: Build
+      - stage: Build
+        displayName: "Build Application"
+        jobs:
+          - job: BuildJob
+            displayName: "Build"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: Bash@3
+                displayName: "Build Application"
+                inputs:
+                  targetType: inline
+                  script: "{{OB_BUILD_COMMAND}}"
+              - task: PublishPipelineArtifact@1
+                displayName: "Publish Build Artifacts"
+                inputs:
+                  targetPath: "$(Build.SourcesDirectory)"
+                  artifact: "build-output"
+                  publishLocation: pipeline
+      # Stage 2: Unit Tests
+      - stage: UnitTest
+        displayName: "Unit Tests"
+        dependsOn: Build
+        condition: succeeded()
+        jobs:
+          - job: UnitTestJob
+            displayName: "Run Unit Tests"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: DownloadPipelineArtifact@2
+                displayName: "Download Build Artifacts"
+                inputs:
+                  artifactName: "build-output"
+                  targetPath: "$(Build.SourcesDirectory)"
+              - task: Bash@3
+                displayName: "Run Unit Tests"
+                inputs:
+                  targetType: inline
+                  script: "{{UNIT_TEST_COMMAND}}"
+              - task: PublishTestResults@2
+                displayName: "Publish Unit Test Results"
+                condition: succeededOrFailed()
+                inputs:
+                  testResultsFiles: "**/test-results.xml"
+                  testRunTitle: "Unit Tests"
+      # Stage 3: Integration Tests
+      - stage: IntegrationTest
+        displayName: "Integration Tests"
+        dependsOn: UnitTest
+        condition: and(succeeded(), ne('{{INTEGRATION_TEST_COMMAND}}', ''))
+        jobs:
+          - job: IntegrationTestJob
+            displayName: "Run Integration Tests"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: DownloadPipelineArtifact@2
+                displayName: "Download Build Artifacts"
+                inputs:
+                  artifactName: "build-output"
+                  targetPath: "$(Build.SourcesDirectory)"
+              - task: Bash@3
+                displayName: "Run Integration Tests"
+                inputs:
+                  targetType: inline
+                  script: "{{INTEGRATION_TEST_COMMAND}}"
+              - task: PublishTestResults@2
+                displayName: "Publish Integration Test Results"
+                condition: succeededOrFailed()
+                inputs:
+                  testResultsFiles: "**/integration-test-results.xml"
+                  testRunTitle: "Integration Tests"
+      # Stage 4: Docker Build
+      - stage: DockerBuild
+        displayName: "Build Docker Image"
+        dependsOn: IntegrationTest
+        condition: succeeded()
+        jobs:
+          - job: DockerBuildJob
+            displayName: "Kaniko Build & Push"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: setVars
+                displayName: "Set Build Variables"
+                vars:
+                  service: "$(serviceName)"
+                  acrRepoName: "$(projectName)"
+                  dockerFile: "{{OB_DOCKERFILE_PATH}}"
+                  imageTag: "$(containerRegistry)/$(projectName)/$(serviceName):$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+                  context: "$(Build.SourcesDirectory)"
+                  containerRegistryFullName: "$(containerRegistry)"
+                injectScript: "templates/variables/cde-vars-build-conditions.yml"
+              - task: injectScript
+                displayName: "Create build-info.json"
+                scriptPath: "templates/scripts/create_build_info.sh"
+              - task: injectScript
+                displayName: "Kaniko Build & Push"
+                scriptPath: "templates/scripts/kaniko_build_push.sh"
+      # Stage 5: Deploy
+      - stage: Deploy
+        displayName: "Deploy to {{DEPLOY_ENVIRONMENT}}"
+        dependsOn: DockerBuild
+        condition: succeeded()
+        jobs:
+          - job: DeployJob
+            displayName: "Helm Deploy"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: injectScript
+                displayName: "Deploy via Helm"
+                scriptPath: "templates/scripts/helm_deploy.sh"
+                vars:
+                  clusterDefinition: "{{CLUSTER_DEFINITION}}"
+                  environment: "$(deployEnvironment)"
+                  helmChartPath: "{{HELM_CHART_PATH}}"
+                  imageName: "$(containerRegistry)/$(projectName)/$(serviceName)"
+                  imageTag: "$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+              - task: Bash@3
+                displayName: "Wait for Service Ready"
+                inputs:
+                  targetType: inline
+                  script: |
+                    echo "Waiting for service to be ready..."
+                    sleep 60
+      # Stage 6: Smoke Tests
+      - stage: SmokeTest
+        displayName: "Smoke Tests"
+        dependsOn: Deploy
+        condition: succeeded()
+        jobs:
+          - job: SmokeTestJob
+            displayName: "Run Smoke Tests"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: Bash@3
+                displayName: "Install k6"
+                inputs:
+                  targetType: inline
+                  script: |
+                    curl -L https://github.com/grafana/k6/releases/download/v0.46.0/k6-v0.46.0-linux-amd64.tar.gz | tar xvz
+                    sudo cp k6-v0.46.0-linux-amd64/k6 /usr/local/bin/
+              - task: Bash@3
+                displayName: "Run k6 Smoke Test"
+                condition: ne('{{K6_SCRIPT_PATH}}', '')
+                inputs:
+                  targetType: inline
+                  script: |
+                    k6 run --vus 1 --duration 30s \
+                      --env SERVICE_URL=$(serviceUrl) \
+                      {{K6_SCRIPT_PATH}}
+      # Stage 7: Load Tests (Manual trigger)
+      - stage: LoadTest
+        displayName: "Load Tests"
+        dependsOn: SmokeTest
+        condition: and(succeeded(), eq(variables['Build.Reason'], 'Manual'))
+        jobs:
+          - job: LoadTestJob
+            displayName: "Run Load Tests"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: Bash@3
+                displayName: "Install k6"
+                inputs:
+                  targetType: inline
+                  script: |
+                    curl -L https://github.com/grafana/k6/releases/download/v0.46.0/k6-v0.46.0-linux-amd64.tar.gz | tar xvz
+                    sudo cp k6-v0.46.0-linux-amd64/k6 /usr/local/bin/
+              - task: Bash@3
+                displayName: "Run k6 Load Test"
+                condition: ne('{{K6_SCRIPT_PATH}}', '')
+                inputs:
+                  targetType: inline
+                  script: |
+                    k6 run --vus {{LOAD_TEST_VUS}} --duration {{LOAD_TEST_DURATION}} \
+                      --env SERVICE_URL=$(serviceUrl) \
+                      --out json=$(Build.ArtifactStagingDirectory)/k6-results.json \
+                      {{K6_SCRIPT_PATH}}
+              - task: PublishPipelineArtifact@1
+                displayName: "Publish Load Test Results"
+                inputs:
+                  targetPath: "$(Build.ArtifactStagingDirectory)"
+                  artifact: "load-test-results"
+                  publishLocation: pipeline
+              - task: Bash@3
+                displayName: "Check Performance Thresholds"
+                condition: ne('{{PERFORMANCE_THRESHOLD_P95}}', '')
+                inputs:
+                  targetType: inline
+                  script: |
+                    THRESHOLD={{PERFORMANCE_THRESHOLD_P95}}
+                    P95=$(jq '.metrics.http_req_duration.values.p95' $(Build.ArtifactStagingDirectory)/k6-results.json)
+                    echo "P95 response time: ${P95}ms"
+                    if (( $(echo "$P95 > $THRESHOLD" | bc -l) )); then
+                      echo "P95 ${P95}ms exceeds threshold ${THRESHOLD}ms"
+                      exit 1
+                    fi
+                    echo "Performance meets requirements"

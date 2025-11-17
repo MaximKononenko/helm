@@ -1,0 +1,233 @@
+apiVersion: ops-box.io/v1
+kind: AdoPipelineDefinition
+metadata:
+  name: ci-cd-security-scanning
+  labels:
+    ops-box.io/template: "true"
+    ops-box.io/collection: "community"
+    ops-box.io/template-type: "pipeline-template"
+    ops-box.io/pattern: "ci-cd-security"
+    ops-box.io/complexity: "advanced"
+    ops-box.io/build-tool: "kaniko"
+    ops-box.io/language: "any"
+    ops-box.io/type: "singleService"
+    ops-box.io/features: "security-scanning.trivy.container-scanning.sast"
+  annotations:
+    description: |
+      Security-focused CI/CD pipeline with comprehensive scanning.
+      Includes dependency scanning (OWASP), SAST, container image scanning (Trivy).
+      Fails pipeline if critical vulnerabilities found.
+      Ideal for security-conscious projects requiring vulnerability management.
+    ops-box.io/placeholders: '[{"name":"PIPELINE_NAME","wizardStep":"project","displayName":"Pipeline Name","description":"Unique name for the pipeline","required":true,"scope":"global"},{"name":"OB_SOURCE_GIT_DEFINITION","wizardStep":"ci","displayName":"Source Repository","description":"GitDefinition name for source code (auto-filled from wizard)","required":true,"scope":"global","crField":"spec.sourceRepository.gitDefinitionName"},{"name":"OB_TEMPLATES_GIT_DEFINITION","wizardStep":"ci","displayName":"Templates Repository","description":"GitDefinition name for pipeline templates (auto-filled from wizard)","required":true,"scope":"global","crField":"spec.templatesSource.gitDefinitionName"},{"name":"TEMPLATES_BASE_PATH","wizardStep":"ci","displayName":"Templates Base Path","description":"Base path in templates repository","required":false,"scope":"global"},{"name":"OB_TRIGGER_BRANCHES","wizardStep":"ci","displayName":"Trigger Branches","description":"Branches that trigger pipeline (comma-separated) (auto-filled from wizard)","required":false,"scope":"global","crField":"spec.ciConfig.trigger.branches.include"},{"name":"OB_BUILD_COMMAND","wizardStep":"ci","displayName":"Build Command","description":"Command to build the application (auto-filled from wizard)","required":true,"scope":"per-service","crField":"spec.sourceRepository.services[].buildCommand"},{"name":"OB_TEST_COMMAND","wizardStep":"ci","displayName":"Test Command","description":"Command to run tests (auto-filled from wizard)","required":true,"scope":"per-service","crField":"spec.sourceRepository.services[].testCommand"},{"name":"DEPENDENCY_CHECK_PATH","wizardStep":"tests","displayName":"Dependency Check Path","description":"Path to dependency manifest (requirements.txt, package.json, pom.xml)","required":false,"scope":"global"},{"name":"TRIVY_SEVERITY","wizardStep":"tests","displayName":"Trivy Severity Threshold","description":"Minimum severity to fail (CRITICAL, HIGH, MEDIUM, LOW)","required":false,"scope":"global"},{"name":"OB_DOCKERFILE_PATH","wizardStep":"ci","displayName":"Dockerfile Path","description":"Path to Dockerfile (auto-filled from wizard)","required":false,"scope":"per-service","crField":"spec.sourceRepository.services[].dockerfilePath"},{"name":"OB_CONTAINER_REGISTRY","wizardStep":"ci","displayName":"Container Registry","description":"Container registry URL (auto-filled from wizard)","required":false,"scope":"global","crField":"spec.buildConfig.containerRegistry"},{"name":"OB_PROJECT_NAME","wizardStep":"project","displayName":"Project Name","description":"Project name for image tagging (auto-filled from wizard)","required":false,"scope":"global","crField":"spec.projectSetup.projectName"},{"name":"OB_SERVICE_NAME","wizardStep":"ci","displayName":"Service Name","description":"Service name for image tagging (auto-filled from wizard)","required":false,"scope":"per-service","crField":"spec.sourceRepository.services[].name"},{"name":"DEPLOY_ENVIRONMENT","wizardStep":"cd","displayName":"Deployment Environment","description":"Target environment (dev, staging, prod)","required":true,"scope":"global"},{"name":"CLUSTER_DEFINITION","wizardStep":"cd","displayName":"Cluster Definition","description":"ClusterDefinition name for deployment","required":true,"scope":"global"},{"name":"HELM_CHART_PATH","wizardStep":"cd","displayName":"Helm Chart Path","description":"Path to Helm chart","required":false,"scope":"global"},{"name":"OB_OUTPUT_GIT_DEFINITION","wizardStep":"output","displayName":"Output Repository","description":"GitDefinition name for pipeline output","required":true,"scope":"global","type":"gitdefinition","gitPurpose":"output","crField":"spec.outputs.pipeline.gitDefinitionName"}]'
+spec:
+  draft: false
+  sourceRepository:
+    gitDefinitionName: "{{OB_SOURCE_GIT_DEFINITION}}"
+  templatesSource:
+    gitDefinitionName: "{{OB_TEMPLATES_GIT_DEFINITION}}"
+    basePath: "{{TEMPLATES_BASE_PATH}}"
+  pipelineDefinition:
+    name: "{{PIPELINE_NAME}}"
+    trigger:
+      branches:
+        include: "{{OB_TRIGGER_BRANCHES}}"
+    pool:
+      vmImage: ubuntu-latest
+    variables:
+      - name: containerRegistry
+        value: "{{OB_CONTAINER_REGISTRY}}"
+      - name: projectName
+        value: "{{OB_PROJECT_NAME}}"
+      - name: serviceName
+        value: "{{OB_SERVICE_NAME}}"
+      - name: deployEnvironment
+        value: "{{DEPLOY_ENVIRONMENT}}"
+      - name: trivySeverity
+        value: "{{TRIVY_SEVERITY}}"
+    resources:
+      repositories:
+        - repository: adoRepository
+          type: git
+          name: "{{OB_TEMPLATES_GIT_DEFINITION}}"
+    stages:
+      # Stage 1: Build and Test
+      - stage: Build
+        displayName: "Build and Test"
+        jobs:
+          - job: BuildTestJob
+            displayName: "Build & Test"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: Bash@3
+                displayName: "Build Application"
+                inputs:
+                  targetType: inline
+                  script: "{{OB_BUILD_COMMAND}}"
+              - task: Bash@3
+                displayName: "Run Tests"
+                inputs:
+                  targetType: inline
+                  script: "{{OB_TEST_COMMAND}}"
+              - task: PublishTestResults@2
+                displayName: "Publish Test Results"
+                condition: succeededOrFailed()
+                inputs:
+                  testResultsFiles: "**/test-results.xml"
+                  testRunTitle: "Unit Tests"
+      # Stage 2: Security Scanning
+      - stage: SecurityScan
+        displayName: "Security Scanning"
+        dependsOn: Build
+        condition: succeeded()
+        jobs:
+          - job: DependencyCheck
+            displayName: "Dependency Vulnerability Scan"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: Bash@3
+                displayName: "Install OWASP Dependency-Check"
+                inputs:
+                  targetType: inline
+                  script: |
+                    curl -L -o dependency-check.zip https://github.com/jeremylong/DependencyCheck/releases/download/v8.4.0/dependency-check-8.4.0-release.zip
+                    unzip dependency-check.zip
+                    chmod +x dependency-check/bin/dependency-check.sh
+              - task: Bash@3
+                displayName: "Run Dependency Check"
+                condition: ne('{{DEPENDENCY_CHECK_PATH}}', '')
+                inputs:
+                  targetType: inline
+                  script: |
+                    ./dependency-check/bin/dependency-check.sh \
+                      --scan {{DEPENDENCY_CHECK_PATH}} \
+                      --format HTML \
+                      --format JSON \
+                      --project $(serviceName) \
+                      --out $(Build.ArtifactStagingDirectory)/dependency-check
+              - task: PublishPipelineArtifact@1
+                displayName: "Publish Dependency Check Results"
+                inputs:
+                  targetPath: "$(Build.ArtifactStagingDirectory)/dependency-check"
+                  artifact: "dependency-check-report"
+                  publishLocation: pipeline
+              - task: Bash@3
+                displayName: "Check Vulnerability Threshold"
+                inputs:
+                  targetType: inline
+                  script: |
+                    CRITICAL=$(jq '.dependencies[].vulnerabilities[] | select(.severity=="CRITICAL")' $(Build.ArtifactStagingDirectory)/dependency-check/dependency-check-report.json | wc -l)
+                    HIGH=$(jq '.dependencies[].vulnerabilities[] | select(.severity=="HIGH")' $(Build.ArtifactStagingDirectory)/dependency-check/dependency-check-report.json | wc -l)
+                    echo "Found $CRITICAL critical and $HIGH high vulnerabilities"
+                    if [ "$CRITICAL" -gt 0 ]; then
+                      echo "Critical vulnerabilities found - failing pipeline"
+                      exit 1
+                    fi
+          - job: SASTScan
+            displayName: "Static Application Security Testing"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: Bash@3
+                displayName: "Install Bandit (Python SAST)"
+                inputs:
+                  targetType: inline
+                  script: "pip install bandit"
+              - task: Bash@3
+                displayName: "Run Bandit SAST"
+                inputs:
+                  targetType: inline
+                  script: |
+                    bandit -r . -f json -o $(Build.ArtifactStagingDirectory)/bandit-report.json || true
+                    bandit -r . -f html -o $(Build.ArtifactStagingDirectory)/bandit-report.html || true
+              - task: PublishPipelineArtifact@1
+                displayName: "Publish SAST Results"
+                inputs:
+                  targetPath: "$(Build.ArtifactStagingDirectory)"
+                  artifact: "sast-report"
+                  publishLocation: pipeline
+      # Stage 3: Docker Build
+      - stage: DockerBuild
+        displayName: "Build Docker Image"
+        dependsOn: SecurityScan
+        condition: succeeded()
+        jobs:
+          - job: DockerBuildJob
+            displayName: "Kaniko Build & Push"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: setVars
+                displayName: "Set Build Variables"
+                vars:
+                  service: "$(serviceName)"
+                  acrRepoName: "$(projectName)"
+                  dockerFile: "{{OB_DOCKERFILE_PATH}}"
+                  imageTag: "$(containerRegistry)/$(projectName)/$(serviceName):$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+                  context: "$(Build.SourcesDirectory)"
+                  containerRegistryFullName: "$(containerRegistry)"
+                injectScript: "templates/variables/cde-vars-build-conditions.yml"
+              - task: injectScript
+                displayName: "Create build-info.json"
+                scriptPath: "templates/scripts/create_build_info.sh"
+              - task: injectScript
+                displayName: "Kaniko Build & Push"
+                scriptPath: "templates/scripts/kaniko_build_push.sh"
+      # Stage 4: Container Image Scanning
+      - stage: ContainerScan
+        displayName: "Container Image Security Scan"
+        dependsOn: DockerBuild
+        condition: succeeded()
+        jobs:
+          - job: TrivyScan
+            displayName: "Trivy Container Scan"
+            steps:
+              - task: Bash@3
+                displayName: "Install Trivy"
+                inputs:
+                  targetType: inline
+                  script: |
+                    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+              - task: Bash@3
+                displayName: "Run Trivy Scan"
+                inputs:
+                  targetType: inline
+                  script: |
+                    IMAGE_NAME="$(containerRegistry)/$(projectName)/$(serviceName):$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+                    trivy image --format json --output $(Build.ArtifactStagingDirectory)/trivy-report.json $IMAGE_NAME
+                    trivy image --format table $IMAGE_NAME
+              - task: PublishPipelineArtifact@1
+                displayName: "Publish Trivy Results"
+                inputs:
+                  targetPath: "$(Build.ArtifactStagingDirectory)/trivy-report.json"
+                  artifact: "trivy-scan-report"
+                  publishLocation: pipeline
+              - task: Bash@3
+                displayName: "Check Trivy Severity Threshold"
+                inputs:
+                  targetType: inline
+                  script: |
+                    SEVERITY="$(trivySeverity)"
+                    IMAGE_NAME="$(containerRegistry)/$(projectName)/$(serviceName):$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+                    trivy image --severity $SEVERITY --exit-code 1 $IMAGE_NAME
+      # Stage 5: Deploy (only if all scans pass)
+      - stage: Deploy
+        displayName: "Deploy to {{DEPLOY_ENVIRONMENT}}"
+        dependsOn: ContainerScan
+        condition: succeeded()
+        jobs:
+          - job: DeployJob
+            displayName: "Helm Deploy"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: injectScript
+                displayName: "Deploy via Helm"
+                scriptPath: "templates/scripts/helm_deploy.sh"
+                vars:
+                  clusterDefinition: "{{CLUSTER_DEFINITION}}"
+                  environment: "$(deployEnvironment)"
+                  helmChartPath: "{{HELM_CHART_PATH}}"
+                  imageName: "$(containerRegistry)/$(projectName)/$(serviceName)"
+                  imageTag: "$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"

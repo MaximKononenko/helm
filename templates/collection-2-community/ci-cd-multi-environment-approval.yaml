@@ -1,0 +1,234 @@
+apiVersion: ops-box.io/v1
+kind: AdoPipelineDefinition
+metadata:
+  name: ci-cd-multi-environment-approval
+  labels:
+    ops-box.io/template: "true"
+    ops-box.io/collection: "community"
+    ops-box.io/template-type: "pipeline-template"
+    ops-box.io/pattern: "ci-cd-multi-env"
+    ops-box.io/complexity: "advanced"
+    ops-box.io/build-tool: "kaniko"
+    ops-box.io/language: "any"
+    ops-box.io/type: "singleService"
+    ops-box.io/features: "multi-environment.manual-approval.blue-green"
+  annotations:
+    description: |
+      Multi-environment CI/CD pipeline with manual approval gates.
+      Deploys to Dev (automatic), Staging (approval required), Production (approval required).
+      Includes rollback capabilities and deployment verification.
+      Ideal for production-grade deployments with governance requirements.
+    ops-box.io/placeholders: '[{"name":"PIPELINE_NAME","wizardStep":"project","displayName":"Pipeline Name","description":"Unique name for the pipeline","required":true,"scope":"global"},{"name":"OB_SOURCE_GIT_DEFINITION","wizardStep":"ci","displayName":"Source Repository","description":"GitDefinition name for source code (auto-filled from wizard)","required":true,"scope":"global","crField":"spec.sourceRepository.gitDefinitionName"},{"name":"OB_TEMPLATES_GIT_DEFINITION","wizardStep":"ci","displayName":"Templates Repository","description":"GitDefinition name for pipeline templates (auto-filled from wizard)","required":true,"scope":"global","crField":"spec.templatesSource.gitDefinitionName"},{"name":"TEMPLATES_BASE_PATH","wizardStep":"ci","displayName":"Templates Base Path","description":"Base path in templates repository","required":false,"scope":"global"},{"name":"OB_TRIGGER_BRANCHES","wizardStep":"ci","displayName":"Trigger Branches","description":"Branches that trigger pipeline (comma-separated) (auto-filled from wizard)","required":false,"scope":"global","crField":"spec.ciConfig.trigger.branches.include"},{"name":"OB_BUILD_COMMAND","wizardStep":"ci","displayName":"Build Command","description":"Command to build the application (auto-filled from wizard)","required":true,"scope":"per-service","crField":"spec.sourceRepository.services[].buildCommand"},{"name":"OB_TEST_COMMAND","wizardStep":"ci","displayName":"Test Command","description":"Command to run tests (auto-filled from wizard)","required":true,"scope":"per-service","crField":"spec.sourceRepository.services[].testCommand"},{"name":"OB_DOCKERFILE_PATH","wizardStep":"ci","displayName":"Dockerfile Path","description":"Path to Dockerfile (auto-filled from wizard)","required":false,"scope":"per-service","crField":"spec.sourceRepository.services[].dockerfilePath"},{"name":"OB_CONTAINER_REGISTRY","wizardStep":"ci","displayName":"Container Registry","description":"Container registry URL (auto-filled from wizard)","required":false,"scope":"global","crField":"spec.buildConfig.containerRegistry"},{"name":"OB_PROJECT_NAME","wizardStep":"project","displayName":"Project Name","description":"Project name for image tagging (auto-filled from wizard)","required":false,"scope":"global","crField":"spec.projectSetup.projectName"},{"name":"OB_SERVICE_NAME","wizardStep":"ci","displayName":"Service Name","description":"Service name for image tagging (auto-filled from wizard)","required":false,"scope":"per-service","crField":"spec.sourceRepository.services[].name"},{"name":"DEV_CLUSTER","wizardStep":"cd","displayName":"Dev Cluster","description":"ClusterDefinition for dev environment","required":true,"scope":"global"},{"name":"STAGING_CLUSTER","wizardStep":"cd","displayName":"Staging Cluster","description":"ClusterDefinition for staging environment","required":true,"scope":"global"},{"name":"PROD_CLUSTER","wizardStep":"cd","displayName":"Production Cluster","description":"ClusterDefinition for production environment","required":true,"scope":"global"},{"name":"HELM_CHART_PATH","wizardStep":"cd","displayName":"Helm Chart Path","description":"Path to Helm chart","required":false,"scope":"global"},{"name":"STAGING_APPROVERS","wizardStep":"cd","displayName":"Staging Approvers","description":"Email addresses for staging approval (comma-separated)","required":false,"scope":"global"},{"name":"PROD_APPROVERS","wizardStep":"cd","displayName":"Production Approvers","description":"Email addresses for production approval (comma-separated)","required":false,"scope":"global"},{"name":"HEALTH_CHECK_URL","wizardStep":"cd","displayName":"Health Check URL","description":"Application health check endpoint","required":false,"scope":"global"},{"name":"OB_OUTPUT_GIT_DEFINITION","wizardStep":"output","displayName":"Output Repository","description":"GitDefinition name for pipeline output","required":true,"scope":"global","type":"gitdefinition","gitPurpose":"output","crField":"spec.outputs.pipeline.gitDefinitionName"}]'
+spec:
+  draft: false
+  sourceRepository:
+    gitDefinitionName: "{{OB_SOURCE_GIT_DEFINITION}}"
+  templatesSource:
+    gitDefinitionName: "{{OB_TEMPLATES_GIT_DEFINITION}}"
+    basePath: "{{TEMPLATES_BASE_PATH}}"
+  pipelineDefinition:
+    name: "{{PIPELINE_NAME}}"
+    trigger:
+      branches:
+        include: "{{OB_TRIGGER_BRANCHES}}"
+    pool:
+      vmImage: ubuntu-latest
+    variables:
+      - name: containerRegistry
+        value: "{{OB_CONTAINER_REGISTRY}}"
+      - name: projectName
+        value: "{{OB_PROJECT_NAME}}"
+      - name: serviceName
+        value: "{{OB_SERVICE_NAME}}"
+      - name: healthCheckUrl
+        value: "{{HEALTH_CHECK_URL}}"
+    resources:
+      repositories:
+        - repository: adoRepository
+          type: git
+          name: "{{OB_TEMPLATES_GIT_DEFINITION}}"
+    stages:
+      # Stage 1: Build and Test
+      - stage: Build
+        displayName: "Build and Test"
+        jobs:
+          - job: BuildTestJob
+            displayName: "Build & Test"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: Bash@3
+                displayName: "Build Application"
+                inputs:
+                  targetType: inline
+                  script: "{{OB_BUILD_COMMAND}}"
+              - task: Bash@3
+                displayName: "Run Tests"
+                inputs:
+                  targetType: inline
+                  script: "{{OB_TEST_COMMAND}}"
+              - task: PublishTestResults@2
+                displayName: "Publish Test Results"
+                condition: succeededOrFailed()
+                inputs:
+                  testResultsFiles: "**/test-results.xml"
+                  testRunTitle: "Unit Tests"
+      # Stage 2: Docker Build
+      - stage: DockerBuild
+        displayName: "Build Docker Image"
+        dependsOn: Build
+        condition: succeeded()
+        jobs:
+          - job: DockerBuildJob
+            displayName: "Kaniko Build & Push"
+            steps:
+              - checkout: self
+                displayName: "Checkout Source Code"
+              - task: setVars
+                displayName: "Set Build Variables"
+                vars:
+                  service: "$(serviceName)"
+                  acrRepoName: "$(projectName)"
+                  dockerFile: "{{OB_DOCKERFILE_PATH}}"
+                  imageTag: "$(containerRegistry)/$(projectName)/$(serviceName):$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+                  context: "$(Build.SourcesDirectory)"
+                  containerRegistryFullName: "$(containerRegistry)"
+                injectScript: "templates/variables/cde-vars-build-conditions.yml"
+              - task: injectScript
+                displayName: "Create build-info.json"
+                scriptPath: "templates/scripts/create_build_info.sh"
+              - task: injectScript
+                displayName: "Kaniko Build & Push"
+                scriptPath: "templates/scripts/kaniko_build_push.sh"
+      # Stage 3: Deploy to Dev (Automatic)
+      - stage: DeployDev
+        displayName: "Deploy to Development"
+        dependsOn: DockerBuild
+        condition: succeeded()
+        jobs:
+          - deployment: DeployDevJob
+            displayName: "Deploy to Dev"
+            environment: development
+            strategy:
+              runOnce:
+                deploy:
+                  steps:
+                    - checkout: self
+                      displayName: "Checkout Source Code"
+                    - task: injectScript
+                      displayName: "Deploy to Dev via Helm"
+                      scriptPath: "templates/scripts/helm_deploy.sh"
+                      vars:
+                        clusterDefinition: "{{DEV_CLUSTER}}"
+                        environment: "dev"
+                        helmChartPath: "{{HELM_CHART_PATH}}"
+                        imageName: "$(containerRegistry)/$(projectName)/$(serviceName)"
+                        imageTag: "$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+                    - task: Bash@3
+                      displayName: "Verify Dev Deployment"
+                      condition: ne('$(healthCheckUrl)', '')
+                      inputs:
+                        targetType: inline
+                        script: |
+                          for i in {1..10}; do
+                            if curl -f $(healthCheckUrl); then
+                              echo "Health check passed"
+                              exit 0
+                            fi
+                            echo "Waiting for health check... ($i/10)"
+                            sleep 30
+                          done
+                          echo "Health check failed"
+                          exit 1
+      # Stage 4: Deploy to Staging (Manual Approval)
+      - stage: DeployStaging
+        displayName: "Deploy to Staging"
+        dependsOn: DeployDev
+        condition: succeeded()
+        jobs:
+          - deployment: DeployStaging Job
+            displayName: "Deploy to Staging"
+            environment: staging
+            strategy:
+              runOnce:
+                deploy:
+                  steps:
+                    - task: ManualValidation@0
+                      displayName: "Staging Approval Gate"
+                      inputs:
+                        notifyUsers: "{{STAGING_APPROVERS}}"
+                        instructions: "Review dev deployment and approve staging deployment"
+                        onTimeout: reject
+                    - checkout: self
+                      displayName: "Checkout Source Code"
+                    - task: injectScript
+                      displayName: "Deploy to Staging via Helm"
+                      scriptPath: "templates/scripts/helm_deploy.sh"
+                      vars:
+                        clusterDefinition: "{{STAGING_CLUSTER}}"
+                        environment: "staging"
+                        helmChartPath: "{{HELM_CHART_PATH}}"
+                        imageName: "$(containerRegistry)/$(projectName)/$(serviceName)"
+                        imageTag: "$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+                    - task: Bash@3
+                      displayName: "Verify Staging Deployment"
+                      condition: ne('$(healthCheckUrl)', '')
+                      inputs:
+                        targetType: inline
+                        script: |
+                          for i in {1..10}; do
+                            if curl -f $(healthCheckUrl); then
+                              echo "Health check passed"
+                              exit 0
+                            fi
+                            echo "Waiting for health check... ($i/10)"
+                            sleep 30
+                          done
+                          echo "Health check failed"
+                          exit 1
+      # Stage 5: Deploy to Production (Manual Approval)
+      - stage: DeployProduction
+        displayName: "Deploy to Production"
+        dependsOn: DeployStaging
+        condition: succeeded()
+        jobs:
+          - deployment: DeployProductionJob
+            displayName: "Deploy to Production"
+            environment: production
+            strategy:
+              runOnce:
+                deploy:
+                  steps:
+                    - task: ManualValidation@0
+                      displayName: "Production Approval Gate"
+                      inputs:
+                        notifyUsers: "{{PROD_APPROVERS}}"
+                        instructions: "Review staging deployment and approve production deployment"
+                        onTimeout: reject
+                    - checkout: self
+                      displayName: "Checkout Source Code"
+                    - task: injectScript
+                      displayName: "Deploy to Production via Helm"
+                      scriptPath: "templates/scripts/helm_deploy.sh"
+                      vars:
+                        clusterDefinition: "{{PROD_CLUSTER}}"
+                        environment: "prod"
+                        helmChartPath: "{{HELM_CHART_PATH}}"
+                        imageName: "$(containerRegistry)/$(projectName)/$(serviceName)"
+                        imageTag: "$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+                    - task: Bash@3
+                      displayName: "Verify Production Deployment"
+                      condition: ne('$(healthCheckUrl)', '')
+                      inputs:
+                        targetType: inline
+                        script: |
+                          for i in {1..10}; do
+                            if curl -f $(healthCheckUrl); then
+                              echo "Health check passed"
+                              exit 0
+                            fi
+                            echo "Waiting for health check... ($i/10)"
+                            sleep 30
+                          done
+                          echo "Health check failed - initiating rollback"
+                          exit 1
