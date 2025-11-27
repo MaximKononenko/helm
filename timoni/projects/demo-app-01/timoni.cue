@@ -1,3 +1,9 @@
+global: {
+	image: {
+		tag: *"latest" | string
+	}
+}
+
 bundle: {
   apiVersion: "v1alpha1"
   name:       "demo-app-01"
@@ -11,7 +17,7 @@ bundle: {
       values: {
         image: {
           repository: "catalina.azurecr.io/cmp/backend"
-          tag:        *"latest" | string
+          tag:        global.image.tag
           digest:     ""
           pullPolicy: "IfNotPresent"
         }
@@ -71,7 +77,7 @@ bundle: {
         }
         image: {
           repository: "catalina.azurecr.io/cmp/frontend"
-          tag:        *"latest" | string
+          tag:        global.image.tag
           digest:     ""
           pullPolicy: "IfNotPresent"
         }
