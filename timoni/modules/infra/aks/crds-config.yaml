@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Config
+crd:
+  - name: resourcegroups.resources.azure.com
+  - name: managedclusters.containerservice.azure.com
+  - name: virtualnetworks.network.azure.com
+  - name: virtualnetworkpeerings.network.azure.com
