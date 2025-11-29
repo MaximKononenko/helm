@@ -9,13 +9,14 @@ import (
 	apiVersion: "network.azure.com/v1api20201101"
 	kind:       "VirtualNetwork"
 	metadata: {
-		name:      "\( _config.name )-vnet"
+		name:      _config.names.vnet
 		namespace: "default"
 	}
 	spec: {
 		location: _config.location
+		tags:     _config.tags
 		owner: {
-			name: _config.name // The Resource Group
+			name: _config.names.networkResourceGroup
 		}
 		addressSpace: {
 			addressPrefixes: [_config.network.cidr]

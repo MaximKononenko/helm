@@ -1,0 +1,78 @@
+apiVersion: core.oam.dev/v1beta1
+kind: ComponentDefinition
+metadata:
+  name: timoni-module
+  namespace: vela-system
+spec:
+  workload:
+    definition:
+      apiVersion: batch/v1
+      kind: Job
+  schematic:
+    cue:
+      template: |
+        import (
+          "encoding/json"
+        )
+
+        output: {
+          apiVersion: "batch/v1"
+          kind:       "Job"
+          spec: {
+            backoffLimit: 1
+            ttlSecondsAfterFinished: 3600
+            template: {
+              spec: {
+                restartPolicy: "OnFailure"
+                serviceAccountName: "vela-timoni-runner"
+                containers: [{
+                  name:  "timoni"
+                  image: "ghcr.io/stefanprodan/timoni:v0.23.0"
+                  command: ["/bin/sh", "-c"]
+                  args: [
+                    "echo '" + json.Marshal(parameter.values) + "' > values.json && " +
+                    "timoni apply " + context.name + " " + parameter.url + " --version " + parameter.version + " --values values.json --approve"
+                  ]
+                  env: [
+                    {
+                      name: "HOME"
+                      value: "/tmp"
+                    },
+                    if parameter.kubeconfigSecret != _|_ {
+                      {
+                        name: "KUBECONFIG"
+                        value: "/mnt/kubeconfig/kubeconfig"
+                      }
+                    }
+                  ]
+                  volumeMounts: [
+                    if parameter.kubeconfigSecret != _|_ {
+                      {
+                        name: "kubeconfig"
+                        mountPath: "/mnt/kubeconfig"
+                        readOnly: true
+                      }
+                    }
+                  ]
+                }]
+                volumes: [
+                  if parameter.kubeconfigSecret != _|_ {
+                    {
+                      name: "kubeconfig"
+                      secret: {
+                        secretName: parameter.kubeconfigSecret
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+
+        parameter: {
+          url: string
+          version: string
+          values: {...}
+          kubeconfigSecret?: string
+        }

@@ -1,0 +1,19 @@
+global:
+  image:
+    tag: demo-app-01.187695
+bundle:
+  instances:
+    demo-app-01-backend:
+      values:
+        ingress:
+          enabled: true
+          annotations:
+            kubernetes.io/ingress.class: nginx
+          hosts:
+            - host: demo-app-01-backend.catmktg.com
+              paths:
+                - path: /
+                  pathType: Prefix
+    demo-app-01-frontend:
+      values:
+        replicas: 2

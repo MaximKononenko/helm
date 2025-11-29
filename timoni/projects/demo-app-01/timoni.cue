@@ -11,7 +11,7 @@ bundle: {
     "demo-app-01-backend": {
       module: {
         url:     "oci://catalina.azurecr.io/classic-deployment"
-        version: "0.2.1"
+        version: "0.2.3"
       }
       namespace: "demo-app-01"
       values: {

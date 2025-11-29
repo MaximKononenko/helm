@@ -1,6 +1,33 @@
 # K8s-Ops-Box GitOps Test Repository
 
-This repository contains sample k8s-ops-box Custom Resources for testing GitOps functionality.
+This repository contains sample k8s-ops-box Custom Resources for testing GitOps functionality, along with infrastructure provisioning patterns using KubeVela, Timoni, and Azure Service Operator (ASO2).
+
+## Architecture Overview
+
+### Infrastructure Provisioning Stack
+
+```
+KubeVela Application (applications/*.yaml)
+  └─> uses ComponentDefinition (definitions/timoni-module.yaml)
+      └─> renders Timoni module with values
+          └─> produces ASO2 Custom Resources (VirtualMachine, NetworkInterface, etc.)
+              └─> ASO2 Operator watches these CRs
+                  └─> calls Azure ARM API to provision actual infrastructure
+```
+
+**What Each Tool Does:**
+- **Timoni** - Templating/packaging tool using CUE (replaces Helm charts)
+  - Vendors CRDs for type safety and validation
+  - Templates ASO2 Custom Resources
+  - Provides strong typing and composition capabilities
+- **KubeVela** - Workflow orchestrator and application delivery platform
+  - Applies manifests rendered by Timoni
+  - Provides workflow capabilities (multi-step, approval gates, etc.)
+  - Manages application lifecycle
+- **ASO2** - Infrastructure controller (Azure Service Operator v2)
+  - Watches for ASO2 CRs in the cluster
+  - Provisions actual Azure resources via ARM API
+  - Updates CR status with provisioning progress
 
 ## Structure
 
@@ -25,10 +52,63 @@ This repository contains sample k8s-ops-box Custom Resources for testing GitOps 
 │   ├── demo-app-source.yaml
 │   ├── test-ado-gitops.yaml
 │   └── test-gitops-local.yaml
-└── projects-examples/     # Example projects with Helm charts
-    ├── demo-app-01/       # Demo app with umbrella chart structure
-    │   └── helm/          # Helm chart with frontend and backend subcharts
-    └── demo-app-02/       # Another demo app (placeholder)
+├── projects-examples/     # Example projects with Helm charts
+│   ├── demo-app-01/       # Demo app with umbrella chart structure
+│   │   └── helm/          # Helm chart with frontend and backend subcharts
+│   └── demo-app-02/       # Another demo app (placeholder)
+├── timoni/                # Timoni modules for infrastructure provisioning
+│   └── modules/
+│       └── infra/
+│           ├── aks/       # AKS cluster module (Greenfield)
+│           └── vm/        # VM module (Brownfield - using existing network)
+└── vela/                  # KubeVela configuration
+    ├── applications/      # KubeVela Applications (what to deploy)
+    │   ├── aks-cluster.yaml    # AKS cluster application
+    │   └── test-vm.yaml        # VM test application
+    ├── definitions/       # ComponentDefinitions (how to deploy)
+    │   ├── timoni-module.yaml  # Timoni module component type
+    │   └── rbac.yaml           # RBAC component (for cluster setup)
+    └── *.yaml             # CRD files and ASO2 operator manifests
+```
+
+### vela/ Folder Structure
+
+The `vela/` folder contains KubeVela-specific configuration:
+
+1. **`applications/`** - KubeVela Application manifests
+   - These define **what** infrastructure to provision
+   - Reference Timoni modules via the `timoni-module` component type
+   - Provide values (VM size, location, network config, etc.)
+   - Example: `test-vm.yaml` provisions a VM in existing VNet
+
+2. **`definitions/`** - KubeVela ComponentDefinitions
+   - These define **how** to deploy/render components
+   - `timoni-module.yaml` - Teaches KubeVela how to use Timoni modules
+     - Runs `timoni apply` in a Kubernetes Job
+     - Passes values from Application to the module
+   - `rbac.yaml` - Component for setting up RBAC in clusters
+
+3. **Root `*.yaml` files** - Supporting manifests
+   - `vm-crd.yaml` - Extracted VirtualMachine CRD (for quick install)
+   - `azureserviceoperator_customresourcedefinitions_v2.16.0.yaml` - Full ASO2 CRD bundle
+   - Other operator/controller manifests
+
+**Flow Example:**
+```yaml
+# applications/test-vm.yaml references:
+type: timoni-module  # <-- Uses definitions/timoni-module.yaml
+
+# definitions/timoni-module.yaml runs:
+timoni apply vm-instance oci://catalina.azurecr.io/vm-module
+  --values <from-application>
+
+# This renders timoni/modules/infra/vm/ templates into:
+- VirtualMachine CR (ASO2)
+- NetworkInterface CR (ASO2)
+- PublicIPAddress CR (ASO2, optional)
+
+# ASO2 operator sees these CRs and provisions Azure resources
+```
 ```
 
 ## Resources

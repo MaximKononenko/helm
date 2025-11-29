@@ -9,13 +9,14 @@ import (
 	apiVersion: "containerservice.azure.com/v1api20231001"
 	kind:       "ManagedCluster"
 	metadata: {
-		name:      "\( _config.name )-aks"
+		name:      _config.names.aksCluster
 		namespace: "default"
 	}
 	spec: {
 		location: _config.location
+		tags:     _config.tags
 		owner: {
-			name: _config.name // The Resource Group
+			name: _config.names.aksResourceGroup
 		}
 		dnsPrefix: _config.cluster.dnsPrefix
 		kubernetesVersion: _config.cluster.kubernetesVersion
@@ -50,5 +51,14 @@ import (
 				kind: "VirtualNetworksSubnet"
 			}
 		}]
+		
+		operatorSpec: {
+			secrets: {
+				kubeconfig: {
+					name: "\(_config.names.aksCluster)-kubeconfig"
+					key:  "kubeconfig"
+				}
+			}
+		}
 	}
 }

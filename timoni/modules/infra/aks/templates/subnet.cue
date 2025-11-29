@@ -14,7 +14,7 @@ import (
 	}
 	spec: {
 		owner: {
-			name: "\( _config.name )-vnet" // The VNet
+			name: _config.names.vnet
 		}
 		addressPrefix: _config.network.subnetCidr
 	}

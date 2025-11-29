@@ -15,8 +15,17 @@ package templates
 
 	// User-supplied values
 	subscriptionId: string
-	name: string
 	location: string
+	
+	names: {
+		aksResourceGroup:     string
+		networkResourceGroup: string
+		aksCluster:           string
+		vnet:                 string
+	}
+
+	tags: { [string]: string }
+
 	network: {
 		cidr: string
 		subnetCidr: string
@@ -24,6 +33,13 @@ package templates
 		serviceCidr: string
 		dnsServiceIP: string
 	}
+	
+	peering: {
+		enabled: bool
+		remoteVnetId: string
+		remoteVnetName: string
+	}
+
 	cluster: {
 		kubernetesVersion: string
 		dnsPrefix:         string
@@ -47,7 +63,10 @@ package templates
 	config: #Config
 
 	objects: {
-		resourceGroup: #ResourceGroup & {_config: config}
+		aksResourceGroup: #AKSResourceGroup & {_config: config}
+		if config.names.networkResourceGroup != config.names.aksResourceGroup {
+			networkResourceGroup: #NetworkResourceGroup & {_config: config}
+		}
 		vnet:          #VirtualNetwork & {_config: config}
 		subnet:        #VirtualNetworksSubnet & {_config: config}
 		aks:           #ManagedCluster & {_config: config}

@@ -1,0 +1,50 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: aks-cluster-poc
+  namespace: vela-system
+spec:
+  components:
+    - name: aks-cluster
+      type: timoni-module
+      properties:
+        url: oci://catalina.azurecr.io/aks-module
+        version: 0.2.0
+        values:
+          subscriptionId: "07a22cc7-c34d-4116-b00a-14320e13edf0"
+          location: "eastus2"
+          names:
+            aksResourceGroup: "rg-dev-eastus2-vela-poc"
+            networkResourceGroup: "rg-dev-eastus2-network-vela-poc"
+            aksCluster: "aks-dev-eastus2-vela-poc"
+            vnet: "aks-dev-eastus2-vela-poc-vnet"
+          tags:
+            Environment: "dev"
+            Project: "vela-poc"
+            ManagedBy: "timoni"
+          network:
+            cidr: "10.200.0.0/16" # TODO: Confirm CIDR
+            subnetCidr: "10.200.1.0/24"
+          peering:
+            enabled: false # TODO: Enable and provide remoteVnetId
+            remoteVnetId: ""
+            remoteVnetName: ""
+    - name: argocd-bootstrap
+      type: timoni-module
+      dependsOn:
+        - aks-cluster
+      properties:
+        url: oci://catalina.azurecr.io/argocd
+        version: 0.1.0
+        kubeconfigSecret: "aks-poc-01-aks-kubeconfig"
+        values: {}
+  workflow:
+    steps:
+      - name: provision-cluster
+        type: apply-component
+        properties:
+          component: aks-cluster
+      - name: bootstrap-argocd
+        type: apply-component
+        properties:
+          component: argocd-bootstrap

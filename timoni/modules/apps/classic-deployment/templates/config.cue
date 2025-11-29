@@ -105,6 +105,19 @@ import (
 			periodSeconds?: int
 		}
 	}
+
+	// Ingress configuration
+	ingress: {
+		enabled: *false | bool
+		annotations?: timoniv1.#Annotations
+		hosts?: [...{
+			host: string
+			paths: [...{
+				path:     string
+				pathType: *"Prefix" | string
+			}]
+		}]
+	}
 }
 
 // Instance takes the config values and outputs the Kubernetes objects.
@@ -117,6 +130,10 @@ import (
 
 		deploy: #Deployment & {
 			#config: config
+		}
+
+		if config.ingress.enabled {
+			ingress: #Ingress & {#config: config}
 		}
 	}
 

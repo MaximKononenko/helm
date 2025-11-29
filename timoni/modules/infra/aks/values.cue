@@ -11,11 +11,19 @@ values: {
 	// Azure Subscription ID where resources will be created
 	subscriptionId: string
 
-	// Name of the cluster (used for RG and resources)
-	name: string
-
 	// Azure Region
 	location: string | *"eastus"
+
+	// Resource Naming
+	names: {
+		aksResourceGroup:     string
+		networkResourceGroup: string
+		aksCluster:           string
+		vnet:                 string | *"\(aksCluster)-vnet"
+	}
+
+	// Tags to apply to all resources
+	tags: { [string]: string } | *{}
 
 	// Network Configuration
 	network: {
@@ -31,10 +39,17 @@ values: {
 		dnsServiceIP: string | *"10.245.0.10"
 	}
 
+	// Peering Configuration
+	peering: {
+		enabled: bool | *false
+		remoteVnetId: string | *""
+		remoteVnetName: string | *""
+	}
+
 	// Cluster Configuration
 	cluster: {
 		kubernetesVersion: string | *"1.29.0"
-		dnsPrefix:         string | *name
+		dnsPrefix:         string | *names.aksCluster
 		sku: {
 			name: "Base"
 			tier: "Standard"
