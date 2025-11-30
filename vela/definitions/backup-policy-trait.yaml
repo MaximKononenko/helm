@@ -1,0 +1,54 @@
+apiVersion: core.oam.dev/v1beta1
+kind: TraitDefinition
+metadata:
+  name: backup-policy
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "Attach backup policy tags and monitoring labels to Azure resources"
+spec:
+  appliesToWorkloads:
+    - azure-vm
+  schematic:
+    cue:
+      template: |-
+        patch: {
+          spec: {
+            // Add backup-related tags
+            tags: {
+              BackupEnabled: parameter.enabled
+              BackupRetention: parameter.retentionDays
+              BackupSchedule: parameter.schedule
+              BackupVault: parameter.vaultName | "default-backup-vault"
+            }
+          }
+        }
+        
+        parameter: {
+          // Enable backup
+          enabled: *"true" | string
+          
+          // Retention period in days
+          retentionDays: *30 | int
+          
+          // Backup schedule (cron format)
+          schedule: *"0 2 * * *" | string  // Daily at 2 AM
+          
+          // Backup vault name
+          vaultName?: string
+        }
+        
+        outputs: backupconfig: {
+          apiVersion: v1
+          kind: ConfigMap
+          metadata: {
+            name: context.name + "-backup-config"
+            namespace: context.namespace
+          }
+          data: {
+            enabled: parameter.enabled
+            retention_days: "\(parameter.retentionDays)"
+            schedule: parameter.schedule
+            vault_name: parameter.vaultName | "default-backup-vault"
+            resource_id: context.name
+          }
+        }

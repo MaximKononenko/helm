@@ -116,6 +116,25 @@ spec:
                   storageAccountType: parameter.storageAccountType
                 }
               }
+              
+              // ========== DATA DISKS (optional) ==========
+              if parameter.dataDisks != _|_ {
+                dataDisks: [
+                  for idx, disk in parameter.dataDisks {
+                    createOption: "Attach"
+                    deleteOption: "Delete"
+                    lun:          idx
+                    managedDisk: {
+                      reference: {
+                        group: "compute.azure.com"
+                        kind:  "Disk"
+                        name:  disk.name
+                      }
+                    }
+                    caching: disk.caching | "ReadWrite"
+                  }
+                ]
+              }
             }
 
             networkProfile: {
@@ -235,6 +254,13 @@ spec:
             enabled: *false | bool // Policy: no public IP by default
             sku:     *"Standard" | "Basic" | "Standard"
           }
+
+          // ========== DATA DISKS (optional) ==========
+          // Reference existing Disk resources to attach to VM
+          dataDisks?: [...{
+            name:     string  // Name of the Disk resource
+            caching?: *"ReadWrite" | "None" | "ReadOnly"
+          }]
 
           // ========== USER TAGS (merged with platform defaults) ==========
           tags?: {

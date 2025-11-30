@@ -1,0 +1,42 @@
+apiVersion: core.oam.dev/v1beta1
+kind: TraitDefinition
+metadata:
+  name: cost-tracking
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "Add cost allocation and chargeback tags to Azure resources"
+spec:
+  appliesToWorkloads:
+    - azure-vm
+  schematic:
+    cue:
+      template: |-
+        patch: {
+          spec: {
+            // Add cost tracking tags
+            tags: {
+              CostCenter: parameter.costCenter
+              Department: parameter.department
+              Project: parameter.project
+              BillingCode: parameter.billingCode | "\(parameter.costCenter)-\(parameter.project)"
+              Approver: parameter.approver | "finance-team@company.com"
+            }
+          }
+        }
+        
+        parameter: {
+          // Cost center code (required)
+          costCenter: string
+          
+          // Department name (required)
+          department: string
+          
+          // Project code (required)
+          project: string
+          
+          // Optional billing code (defaults to costCenter-project)
+          billingCode?: string
+          
+          // Budget approver email
+          approver?: string
+        }

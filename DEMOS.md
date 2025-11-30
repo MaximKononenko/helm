@@ -375,24 +375,27 @@ if parameter.publicIP.enabled {
 
 ## Demo Comparison Matrix
 
-| Feature | Demo 1<br/>App + Timoni | Demo 2<br/>Infra + Timoni | Demo 3<br/>Infra + KubeVela + Timoni | Demo 4<br/>Infra + KubeVela Native | Demo 5<br/>REST API Integration |
-|---------|-------------------------|---------------------------|--------------------------------------|-----------------------------------|----------------------------------|
-| **Use Case** | Application deployment | Infrastructure testing | Orchestrated infra | Self-service platform | UI/API integration |
-| **Tool** | Timoni | Timoni | KubeVela + Timoni | KubeVela | Kubernetes REST API |
-| **Execution** | CLI/ArgoCD | CLI | Job wrapper | Controller | HTTP/REST |
-| **Bundles** | ✅ bundle.cue | ✅ bundle.cue | ❌ N/A | ❌ N/A | ❌ N/A |
-| **Create** | ✅ | ✅ | ✅ | ✅ | ✅ POST |
-| **Update** | ✅ | ✅ | ⚠️ Manual | ✅ | ⚠️ PATCH (needs complete payload) |
-| **Delete** | ✅ | ✅ | ⚠️ Manual | ✅ | ✅ DELETE |
-| **OAM Abstraction** | ❌ | ❌ | ⚠️ Limited | ✅ | ✅ (via Application CRD) |
-| **Policy Enforcement** | ⚠️ Module-level | ⚠️ Module-level | ⚠️ Module-level | ✅ CUE validation | ✅ CUE validation + RBAC |
-| **API Integration** | ❌ CLI only | ❌ CLI only | ⚠️ Job-based | ✅ REST API | ✅ Pure REST API |
-| **Authentication** | N/A | N/A | N/A | N/A | ✅ Bearer Token |
-| **RBAC** | N/A | N/A | N/A | ⚠️ Admin-level | ✅ ServiceAccount-based |
-| **Traits Support** | ❌ | ❌ | ❌ | ✅ | ✅ |
-| **UI-Ready** | ❌ | ❌ | ❌ | ⚠️ kubectl proxy | ✅ Direct HTTPS |
-| **Complexity** | Low | Low | High | Medium | Medium |
-| **Best For** | Developers | Testing | ❌ Not recommended | Platform engineering | UI/Frontend integration |
+| Feature | Demo 1<br/>App + Timoni | Demo 2<br/>Infra + Timoni | Demo 3<br/>Infra + KubeVela + Timoni | Demo 4<br/>Infra + KubeVela Native | Demo 5<br/>REST API Integration | Demo 6<br/>Traits (Policies) |
+|---------|-------------------------|---------------------------|--------------------------------------|-----------------------------------|----------------------------------|------------------------------|
+| **Use Case** | Application deployment | Infrastructure testing | Orchestrated infra | Self-service platform | UI/API integration | Composable policies |
+| **Tool** | Timoni | Timoni | KubeVela + Timoni | KubeVela | Kubernetes REST API | KubeVela Traits |
+| **Execution** | CLI/ArgoCD | CLI | Job wrapper | Controller | HTTP/REST | Controller |
+| **Bundles** | ✅ bundle.cue | ✅ bundle.cue | ❌ N/A | ❌ N/A | ❌ N/A | ❌ N/A |
+| **Create** | ✅ | ✅ | ✅ | ✅ | ✅ POST | ✅ |
+| **Update** | ✅ | ✅ | ⚠️ Manual | ✅ | ⚠️ PATCH (needs complete payload) | ✅ |
+| **Delete** | ✅ | ✅ | ⚠️ Manual | ✅ | ✅ DELETE | ✅ |
+| **OAM Abstraction** | ❌ | ❌ | ⚠️ Limited | ✅ | ✅ (via Application CRD) | ✅ |
+| **Policy Enforcement** | ⚠️ Module-level | ⚠️ Module-level | ⚠️ Module-level | ✅ CUE validation | ✅ CUE validation + RBAC | ✅ Trait-based |
+| **API Integration** | ❌ CLI only | ❌ CLI only | ⚠️ Job-based | ✅ REST API | ✅ Pure REST API | ✅ REST API |
+| **Authentication** | N/A | N/A | N/A | N/A | ✅ Bearer Token | ✅ Bearer Token |
+| **RBAC** | N/A | N/A | N/A | ⚠️ Admin-level | ✅ ServiceAccount-based | ✅ ServiceAccount-based |
+| **Traits Support** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ Primary Feature |
+| **Tag Composition** | ⚠️ Hardcoded | ⚠️ Hardcoded | ⚠️ Hardcoded | ✅ User + Platform | ✅ User + Platform | ✅ User + Platform + Traits |
+| **Separation of Concerns** | ❌ | ❌ | ❌ | ⚠️ Limited | ⚠️ Limited | ✅ Full |
+| **Policy Composability** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Mix & Match |
+| **UI-Ready** | ❌ | ❌ | ❌ | ⚠️ kubectl proxy | ✅ Direct HTTPS | ✅ Direct HTTPS |
+| **Complexity** | Low | Low | High | Medium | Medium | Medium |
+| **Best For** | Developers | Testing | ❌ Not recommended | Platform engineering | UI/Frontend integration | Enterprise governance |
 
 ---
 
@@ -729,15 +732,269 @@ tags: {
 
 ---
 
+## Demo 6: Infrastructure Traits (Policies)
+
+**Use Case**: 🎯 **COMPOSABLE POLICIES** - Add cross-cutting concerns without modifying ComponentDefinitions
+
+**Location**: `helm/demos/demo-infra-vm-05-traits/`
+
+### Architecture
+```
+User Application
+    ↓
+Component (azure-vm)
+    ↓
+Traits (backup-policy + cost-tracking + security-baseline + monitoring)
+    ↓
+ComponentDefinition (CUE template with patches)
+    ↓
+ASO2 CRDs with merged tags + ConfigMaps
+    ↓
+Azure Resources
+```
+
+### What are Traits?
+
+**Traits** are reusable operational behaviors attached to workloads:
+- **Separation of Concerns**: Infrastructure logic vs operational policies
+- **Policy Enforcement**: Organization-wide standards
+- **Composability**: Mix and match as needed
+- **Reusability**: Define once, apply everywhere
+
+### Available Traits
+
+1. **backup-policy**: Backup configuration and vault assignment
+2. **cost-tracking**: Cost allocation and chargeback tags
+3. **security-baseline**: Security and compliance settings
+4. **monitoring**: Alerting and metrics configuration
+
+### Prerequisites
+
+```bash
+# 1. Navigate to definitions
+cd helm/vela/definitions
+
+# 2. Apply TraitDefinitions
+kubectl apply -f backup-policy-trait.yaml
+kubectl apply -f cost-tracking-trait.yaml
+kubectl apply -f security-baseline-trait.yaml
+kubectl apply -f monitoring-trait.yaml
+
+# 3. Verify traits are available
+kubectl get traitdefinition -n vela-system
+```
+
+### Demo 1: Full Traits Stack (Production VM)
+
+```bash
+# 1. Navigate to demo
+cd helm/demos/demo-infra-vm-05-traits
+
+# 2. Review Application with all traits
+cat vm-with-all-traits.yaml
+
+# 3. Create VM with all traits
+kubectl apply -f vm-with-all-traits.yaml
+
+# 4. Monitor Application
+kubectl get application.core.oam.dev vm-with-traits -n azureserviceoperator-system
+kubectl describe application.core.oam.dev vm-with-traits -n azureserviceoperator-system
+
+# 5. Check trait outputs (ConfigMaps)
+kubectl get configmap -n azureserviceoperator-system | grep vm-with-traits
+
+# View backup configuration
+kubectl get configmap vm-with-traits-backup-config -n azureserviceoperator-system -o yaml
+
+# View security configuration
+kubectl get configmap vm-with-traits-security-config -n azureserviceoperator-system -o yaml
+
+# View alert configuration
+kubectl get configmap vm-with-traits-alert-config -n azureserviceoperator-system -o yaml
+
+# 6. Verify tags in Azure
+az vm show \
+  --resource-group rg-tst-eastus-istio-compute \
+  --name vm-traits-demo-01 \
+  --subscription a50f971b-376d-4d05-ac33-1e9fcfb8f32c \
+  --query '{name:name, size:hardwareProfile.vmSize, tags:tags}' \
+  -o json | jq .tags
+
+# Expected tags from traits:
+# Backup: BackupEnabled, BackupRetention, BackupSchedule, BackupVault
+# Cost: CostCenter, Department, Project, BillingCode, Approver
+# Security: SecurityLevel, ComplianceFramework, DataClassification, PatchingSchedule
+# Monitoring: MonitoringEnabled, AlertSeverity, AlertContact, MetricsRetention, MonitoringStack, DatadogEnv
+# Plus user tags: Owner, Purpose
+# Plus platform tags: ManagedBy, Environment
+
+# 7. Cleanup
+kubectl delete application.core.oam.dev vm-with-traits -n azureserviceoperator-system
+```
+
+### Demo 2: Minimal Traits (Developer Use Case)
+
+```bash
+# 1. Review minimal configuration
+cat vm-with-minimal-traits.yaml
+
+# 2. Create VM with cost tracking only
+kubectl apply -f vm-with-minimal-traits.yaml
+
+# 3. Monitor
+kubectl get application.core.oam.dev vm-minimal-traits -n azureserviceoperator-system
+
+# 4. Verify only cost tracking tags in Azure
+az vm show \
+  --resource-group rg-tst-eastus-istio-compute \
+  --name vm-traits-minimal-01 \
+  --subscription a50f971b-376d-4d05-ac33-1e9fcfb8f32c \
+  --query 'tags' -o json
+
+# 5. Cleanup
+kubectl delete application.core.oam.dev vm-minimal-traits -n azureserviceoperator-system
+```
+
+### Trait Details
+
+**1. backup-policy**
+```yaml
+traits:
+  - type: backup-policy
+    properties:
+      enabled: "true"
+      retentionDays: 30
+      schedule: "0 2 * * *"  # Daily at 2 AM
+      vaultName: "backup-vault-eastus"
+```
+- Adds backup tags to VM
+- Creates ConfigMap with backup configuration
+- Integrates with Azure Backup service
+
+**2. cost-tracking** (Required for all VMs)
+```yaml
+traits:
+  - type: cost-tracking
+    properties:
+      costCenter: "ENG-001"
+      department: "Engineering"
+      project: "platform-poc"
+      approver: "engineering-lead@company.com"
+```
+- Adds cost allocation tags
+- Enables Azure Cost Management queries
+- Supports chargeback/showback reporting
+
+**3. security-baseline**
+```yaml
+traits:
+  - type: security-baseline
+    properties:
+      securityLevel: "internal"  # public/internal/confidential/restricted
+      complianceFramework: "sox"  # none/pci-dss/hipaa/sox/gdpr
+      dataClassification: "confidential"
+      patchingSchedule: "weekly"  # immediate/weekly/monthly
+```
+- Adds security and compliance tags
+- Creates ConfigMap for security scanning
+- Enables compliance reporting
+
+**4. monitoring**
+```yaml
+traits:
+  - type: monitoring
+    properties:
+      enabled: true
+      alertSeverity: "high"  # critical/high/medium/low
+      alertContact: "ops-team@company.com"
+      metricsRetentionDays: 90
+      monitoringStack: "both"  # datadog/prometheus/both
+      datadogEnv: "production"
+      cpuThreshold: 85
+      memoryThreshold: 90
+      diskThreshold: 80
+```
+- Adds monitoring tags
+- Creates ConfigMap with alert thresholds
+- Integrates with Datadog APM and Prometheus/Grafana stack
+
+### Key Benefits
+
+**1. Separation of Concerns**
+- Developers: Focus on VM specs (size, network, storage)
+- Platform Team: Enforce policies via traits
+- Security Team: Define compliance requirements
+- Finance Team: Control cost allocation
+
+**2. Composability**
+```yaml
+# Production: All policies
+traits:
+  - backup-policy: {retentionDays: 90}
+  - cost-tracking: {costCenter: "PROD-001"}
+  - security-baseline: {securityLevel: "restricted"}
+  - monitoring: {alertSeverity: "critical"}
+
+# Development: Minimal policies
+traits:
+  - cost-tracking: {costCenter: "DEV-002"}
+```
+
+**3. Policy Enforcement**
+- Admission webhooks can require traits
+- Validate trait parameters
+- Prevent non-compliant deployments
+
+**4. Audit and Compliance**
+```bash
+# Audit: Which VMs have backup enabled?
+kubectl get application -n azureserviceoperator-system -o json | \
+  jq '.items[] | select(.spec.components[].traits[]? | .type == "backup-policy")'
+
+# Compliance: List all SOX-compliant VMs
+az resource list --tag ComplianceFramework=sox -o table
+```
+
+### Use Cases
+
+**Platform Self-Service Portal**
+```
+┌─────────────────────────────────────┐
+│ Create Virtual Machine              │
+├─────────────────────────────────────┤
+│ Name: [vm-user-123            ]     │
+│ Size: [Standard_B2s ▼]              │
+│                                     │
+│ Policies:                           │
+│ ☑ Enable Backups                    │
+│   Retention: [30] days              │
+│                                     │
+│ ☑ Cost Tracking (required)          │
+│   Cost Center: [ENG-001      ]      │
+│   Project: [feature-xyz      ]      │
+│                                     │
+│ ☑ Security Baseline                 │
+│   Level: [Internal ▼]               │
+│                                     │
+│ ☐ Advanced Monitoring               │
+│                                     │
+│         [Cancel]  [Create VM]       │
+└─────────────────────────────────────┘
+```
+
+---
+
 ## Next Steps
 
 1. ✅ **Demo 4 Testing Complete**: Full CUD lifecycle validated via REST API
-2. **Improve PATCH Payload**: Include all required properties in vm-update.json
-3. **Add Traits**: Backup policies, cost tagging, security baselines
-4. **Create UI Mockups**: Show how users interact with the platform
-5. **Enhanced RBAC**: Namespace-scoped roles for tenant isolation
-6. **Cost Estimation**: Pre-deployment cost calculation
-7. **Approval Workflow**: Multi-stage approvals for expensive resources
+2. ✅ **Traits Demonstrated**: Backup, Cost, Security, Monitoring
+3. **Test Traits**: Apply TraitDefinitions and validate tag merging
+4. **Improve PATCH Payload**: Include all required properties in vm-update.json
+5. **Create UI Mockups**: Show how users interact with the platform
+6. **Policy Enforcement**: Admission webhook to require traits
+7. **Enhanced RBAC**: Namespace-scoped roles for tenant isolation
+8. **Cost Estimation**: Pre-deployment cost calculation
+9. **Approval Workflow**: Multi-stage approvals for expensive resources
 
 ---
 
@@ -753,13 +1010,22 @@ tags: {
   - `helm/demos/demo-infra-vm-03-vela-native/test-vm-native.yaml` (Demo 4)
   - `helm/demos/demo-infra-vm-04-api/vm-create.json` (Demo 5 - POST)
   - `helm/demos/demo-infra-vm-04-api/vm-update.json` (Demo 5 - PATCH)
+  - `helm/demos/demo-infra-vm-05-traits/vm-with-all-traits.yaml` (Demo 6 - Full traits)
+  - `helm/demos/demo-infra-vm-05-traits/vm-with-minimal-traits.yaml` (Demo 6 - Minimal)
 
 - **RBAC**:
   - `helm/demos/demo-infra-vm-04-api/rbac.yaml` (ServiceAccount, ClusterRole, ClusterRoleBinding, Token Secret)
 
+- **Traits (Policies)**:
+  - `helm/vela/definitions/backup-policy-trait.yaml` (Backup configuration)
+  - `helm/vela/definitions/cost-tracking-trait.yaml` (Cost allocation tags)
+  - `helm/vela/definitions/security-baseline-trait.yaml` (Security and compliance)
+  - `helm/vela/definitions/monitoring-trait.yaml` (Alerting and metrics)
+
 - **Automation**:
   - `helm/demos/demo-infra-vm-04-api/test-api.sh` (Full REST API test script)
   - `helm/demos/demo-infra-vm-04-api/README.md` (API documentation with JavaScript examples)
+  - `helm/demos/demo-infra-vm-05-traits/README.md` (Traits documentation and use cases)
 
 - **Timoni Modules**:
   - `helm/timoni/modules/infra/vm/` (VM module source with deleteOption: Delete)

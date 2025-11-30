@@ -1,0 +1,77 @@
+apiVersion: core.oam.dev/v1beta1
+kind: TraitDefinition
+metadata:
+  name: monitoring
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "Add monitoring configuration and alerting tags"
+spec:
+  appliesToWorkloads:
+    - azure-vm
+  schematic:
+    cue:
+      template: |-
+        patch: {
+          spec: {
+            // Add monitoring tags
+            tags: {
+              MonitoringEnabled: "\(parameter.enabled)"
+              AlertSeverity: parameter.alertSeverity
+              AlertContact: parameter.alertContact
+              MetricsRetention: "\(parameter.metricsRetentionDays)"
+              MonitoringStack: parameter.monitoringStack
+              DatadogEnv: parameter.datadogEnv | "production"
+            }
+          }
+        }
+        
+        parameter: {
+          // Enable monitoring
+          enabled: *true | bool
+          
+          // Alert severity: critical, high, medium, low
+          alertSeverity: *"medium" | "critical" | "high" | "low"
+          
+          // Alert contact (email/Teams/Slack)
+          alertContact: string
+          
+          // Metrics retention in days
+          metricsRetentionDays: *90 | int
+          
+          // Monitoring stack: datadog, prometheus, both
+          monitoringStack: *"datadog" | "prometheus" | "both"
+          
+          // Datadog environment tag
+          datadogEnv?: string
+          
+          // Alert thresholds
+          cpuThreshold?: *85 | int
+          memoryThreshold?: *90 | int
+          diskThreshold?: *85 | int
+        }
+        
+        outputs: alertconfig: {
+          apiVersion: v1
+          kind: ConfigMap
+          metadata: {
+            name: context.name + "-alert-config"
+            namespace: context.namespace
+            labels: {
+              "monitoring": "enabled"
+              "alert-severity": parameter.alertSeverity
+              "monitoring-stack": parameter.monitoringStack
+            }
+          }
+          data: {
+            enabled: "\(parameter.enabled)"
+            alert_severity: parameter.alertSeverity
+            alert_contact: parameter.alertContact
+            metrics_retention_days: "\(parameter.metricsRetentionDays)"
+            monitoring_stack: parameter.monitoringStack
+            datadog_env: parameter.datadogEnv | "production"
+            cpu_threshold: "\(parameter.cpuThreshold)"
+            memory_threshold: "\(parameter.memoryThreshold)"
+            disk_threshold: "\(parameter.diskThreshold)"
+            resource_id: context.name
+          }
+        }

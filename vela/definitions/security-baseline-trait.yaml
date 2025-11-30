@@ -1,0 +1,64 @@
+apiVersion: core.oam.dev/v1beta1
+kind: TraitDefinition
+metadata:
+  name: security-baseline
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "Enforce security baseline settings and compliance tags"
+spec:
+  appliesToWorkloads:
+    - azure-vm
+  schematic:
+    cue:
+      template: |-
+        patch: {
+          spec: {
+            // Add security and compliance tags
+            tags: {
+              SecurityLevel: parameter.securityLevel
+              ComplianceFramework: parameter.complianceFramework
+              DataClassification: parameter.dataClassification
+              PatchingSchedule: parameter.patchingSchedule
+              SecurityContact: parameter.securityContact | "security-team@company.com"
+            }
+          }
+        }
+        
+        parameter: {
+          // Security level: public, internal, confidential, restricted
+          securityLevel: *"internal" | "public" | "confidential" | "restricted"
+          
+          // Compliance framework: none, pci-dss, hipaa, sox, gdpr
+          complianceFramework: *"none" | "pci-dss" | "hipaa" | "sox" | "gdpr"
+          
+          // Data classification: public, internal, confidential, restricted
+          dataClassification: *"internal" | "public" | "confidential" | "restricted"
+          
+          // Patching schedule: immediate, weekly, monthly
+          patchingSchedule: *"weekly" | "immediate" | "monthly"
+          
+          // Security contact email
+          securityContact?: string
+        }
+        
+        outputs: securityconfig: {
+          apiVersion: v1
+          kind: ConfigMap
+          metadata: {
+            name: context.name + "-security-config"
+            namespace: context.namespace
+            labels: {
+              "security-scan": "enabled"
+              "compliance-framework": parameter.complianceFramework
+            }
+          }
+          data: {
+            security_level: parameter.securityLevel
+            compliance_framework: parameter.complianceFramework
+            data_classification: parameter.dataClassification
+            patching_schedule: parameter.patchingSchedule
+            security_contact: parameter.securityContact | "security-team@company.com"
+            resource_id: context.name
+            scan_enabled: "true"
+          }
+        }

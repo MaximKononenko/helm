@@ -1,0 +1,59 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: vm-with-traits
+  namespace: azureserviceoperator-system
+spec:
+  components:
+    - name: vm
+      type: azure-vm
+      properties:
+        vmName: "vm-traits-demo-01"
+        vmSize: "small"
+        environment: "dev"
+        resourceGroup: "rg-tst-eastus-istio-compute"
+        subscriptionId: "a50f971b-376d-4d05-ac33-1e9fcfb8f32c"
+        location: "eastus"
+        network:
+          vnetResourceGroup: "rg-tst-eastus-istio-network"
+          vnetName: "vn-tst-eastus-istio"
+          subnetName: "sn-tst-eastus-istio-aks"
+        tags:
+          Owner: "platform-team"
+          Purpose: "traits-demonstration"
+      # Attach traits for cross-cutting concerns
+      traits:
+        # Backup policy
+        - type: backup-policy
+          properties:
+            enabled: "true"
+            retentionDays: 30
+            schedule: "0 2 * * *" # Daily at 2 AM
+            vaultName: "backup-vault-eastus"
+        # Cost tracking
+        - type: cost-tracking
+          properties:
+            costCenter: "ENG-001"
+            department: "Engineering"
+            project: "platform-poc"
+            approver: "engineering-lead@company.com"
+        # Security baseline
+        - type: security-baseline
+          properties:
+            securityLevel: "internal"
+            complianceFramework: "sox"
+            dataClassification: "confidential"
+            patchingSchedule: "weekly"
+            securityContact: "security-team@company.com"
+        # Monitoring
+        - type: monitoring
+          properties:
+            enabled: true
+            alertSeverity: "high"
+            alertContact: "ops-team@company.com"
+            metricsRetentionDays: 90
+            monitoringStack: "both" # Datadog + Prometheus
+            datadogEnv: "production"
+            cpuThreshold: 85
+            memoryThreshold: 90
+            diskThreshold: 80
