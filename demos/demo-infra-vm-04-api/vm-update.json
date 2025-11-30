@@ -1,0 +1,11 @@
+{
+  "spec": {
+    "components": [{
+      "name": "my-vm",
+      "type": "azure-vm",
+      "properties": {
+        "vmSize": "large"
+      }
+    }]
+  }
+}

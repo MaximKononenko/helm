@@ -57,10 +57,12 @@ spec:
         // Auto-generate tags by merging user tags with platform defaults
         _computedTags: {
           ManagedBy: "kubevela"
-          Environment: parameter.environment | *"unknown"
-          // Merge user-provided tags
-          for k, v in parameter.tags {
-            "\(k)": v
+          Environment: parameter.environment | "dev"
+          // Merge user-provided tags (only if provided)
+          if parameter.tags != _|_ {
+            for k, v in parameter.tags {
+              "\(k)": v
+            }
           }
         }
 
