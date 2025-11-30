@@ -2,14 +2,15 @@ apiVersion: core.oam.dev/v1beta1
 kind: Application
 metadata:
   name: test-vm
-  namespace: default
+  namespace: azureserviceoperator-system
 spec:
   components:
     - name: linux-vm
       type: timoni-module
       properties:
         url: oci://catalina.azurecr.io/vm-module
-        version: 0.1.0
+        version: 0.1.8
+        namespace: azureserviceoperator-system
         values:
           subscriptionId: "a50f971b-376d-4d05-ac33-1e9fcfb8f32c"
           location: "eastus"
@@ -17,6 +18,7 @@ spec:
             resourceGroup: "rg-tst-eastus-istio-compute"
             vm: "vm-vela-test-01"
             networkInterface: "vm-vela-test-01-nic"
+            publicIP: "unused"
           tags:
             Environment: "test"
             Project: "vela-poc"
@@ -24,7 +26,9 @@ spec:
           vm:
             size: "Standard_B2s"
             adminUsername: "azureuser"
-            adminPassword: "ChangeMe123!@#" # TODO: Use KeyVault reference
+            adminPasswordSecret:
+              name: "vm-admin-password"
+              key: "password"
             osDiskSizeGB: 30
             imageReference:
               publisher: "Canonical"
@@ -37,6 +41,7 @@ spec:
             subnetName: "sn-tst-eastus-istio-10-166-54-0-26-aks-b"
           publicIP:
             enabled: false
+            sku: "Standard"
           credential:
             name: "aso-credential-catalina-vault-sqa"
             namespace: "azureserviceoperator-system"

@@ -127,3 +127,7 @@ To use these modules, you will typically:
 4. Run `timoni apply` to deploy the resources.
 
 Refer to the specific project READMEs for detailed instructions.
+
+cd /home/mkononen/pet-projects/helm/timoni/projects/vm-test
+timoni bundle apply -f bundle.cue
+bundle delete -f bundle.cue

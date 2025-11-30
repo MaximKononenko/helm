@@ -17,7 +17,7 @@ package templates
 		resourceGroup:    string
 		vm:               string
 		networkInterface: string
-		publicIP:         string
+		publicIP?:        string
 	}
 
 	tags: {[string]: string}

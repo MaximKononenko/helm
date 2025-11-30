@@ -49,6 +49,7 @@ import (
 			}
 			osDisk: {
 				createOption: "FromImage"
+				deleteOption: "Delete"
 				diskSizeGB:   _config.vm.osDiskSizeGB
 				managedDisk: {
 					storageAccountType: "Premium_LRS"

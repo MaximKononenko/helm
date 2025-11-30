@@ -1,0 +1,27 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: test-vm-native
+  namespace: azureserviceoperator-system
+spec:
+  components:
+    - name: my-vm
+      type: azure-vm
+      properties:
+        # ========== Simplified User Interface ==========
+        subscriptionId: "a50f971b-376d-4d05-ac33-1e9fcfb8f32c"
+        resourceGroup: "rg-tst-eastus-istio-compute"
+        vmName: "vm-kubevela-native-01"
+        # User-friendly size (maps to Azure SKU in ComponentDefinition)
+        vmSize: "medium"
+        # Environment affects actual SKU selection
+        environment: "dev"
+        # Network (required - brownfield)
+        network:
+          vnetResourceGroup: "rg-np-eastus-dashboard"
+          vnetName: "vn-np-eastus-10-166-54-0-24"
+          subnetName: "sn-tst-eastus-istio-10-166-54-0-26-aks-b"
+        # User tags (merged with platform defaults automatically)
+        tags:
+          Team: "platform"
+          Project: "kubevela-demo"

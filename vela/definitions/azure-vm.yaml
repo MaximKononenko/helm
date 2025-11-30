@@ -1,0 +1,247 @@
+apiVersion: core.oam.dev/v1beta1
+kind: ComponentDefinition
+metadata:
+  name: azure-vm
+  namespace: vela-system
+  annotations:
+    definition.oam.dev/description: "Azure Virtual Machine with ASO2"
+spec:
+  workload:
+    type: autodetects.core.oam.dev
+  schematic:
+    cue:
+      template: |-
+        import (
+          "strconv"
+        )
+
+        // ========== CUE PATTERNS: MAPPINGS ==========
+        // Map user-friendly size names to Azure SKUs
+        _sizeMap: {
+          small:  "Standard_B2s"
+          medium: "Standard_D2s_v3"
+          large:  "Standard_D4s_v3"
+        }
+
+        // Environment-specific size mappings
+        _envSizeMap: {
+          dev: {
+            small:  "Standard_B1s"
+            medium: "Standard_B2s"
+            large:  "Standard_D2s_v3"
+          }
+          prod: {
+            small:  "Standard_D2s_v3"
+            medium: "Standard_D4s_v3"
+            large:  "Standard_D8s_v3"
+          }
+        }
+
+        // ========== CUE PATTERNS: CONDITIONALS ==========
+        // Select size based on environment or direct mapping
+        _selectedVmSize: string
+        if parameter.environment != _|_ if parameter.environment != "" {
+          // Environment-aware mapping
+          _selectedVmSize: _envSizeMap[parameter.environment][parameter.vmSize]
+        }
+        if parameter.environment == _|_ {
+          // Simple mapping when no environment specified
+          _selectedVmSize: _sizeMap[parameter.vmSize]
+        }
+        if parameter.environment == "" {
+          // Simple mapping when environment is empty string
+          _selectedVmSize: _sizeMap[parameter.vmSize]
+        }
+
+        // ========== CUE PATTERNS: COMPUTED VALUES ==========
+        // Auto-generate tags by merging user tags with platform defaults
+        _computedTags: {
+          ManagedBy: "kubevela"
+          Environment: parameter.environment | *"unknown"
+          // Merge user-provided tags
+          for k, v in parameter.tags {
+            "\(k)": v
+          }
+        }
+
+        // Output the VirtualMachine resource
+        output: {
+          apiVersion: "compute.azure.com/v1api20220301"
+          kind:       "VirtualMachine"
+          metadata: {
+            name:      parameter.vmName
+            namespace: context.namespace
+            annotations: {
+              "serviceoperator.azure.com/credential-from": parameter.credential.name
+            }
+          }
+          spec: {
+            azureName: parameter.vmName
+            location:  parameter.location
+            owner: {
+              armId: "/subscriptions/" + parameter.subscriptionId + "/resourceGroups/" + parameter.resourceGroup
+            }
+            tags: _computedTags  // Use computed tags
+
+            hardwareProfile: {
+              vmSize: _selectedVmSize  // Use mapped size
+            }
+
+            osProfile: {
+              computerName:  parameter.vmName
+              adminUsername: parameter.adminUsername
+              adminPassword: {
+                name: parameter.adminPasswordSecret.name
+                key:  parameter.adminPasswordSecret.key
+              }
+              linuxConfiguration: {
+                disablePasswordAuthentication: false
+              }
+            }
+
+            storageProfile: {
+              imageReference: {
+                publisher: parameter.imageReference.publisher
+                offer:     parameter.imageReference.offer
+                sku:       parameter.imageReference.sku
+                version:   parameter.imageReference.version
+              }
+              osDisk: {
+                createOption: "FromImage"
+                deleteOption: "Delete"
+                diskSizeGB:   parameter.osDiskSizeGB
+                managedDisk: {
+                  storageAccountType: parameter.storageAccountType
+                }
+              }
+            }
+
+            networkProfile: {
+              networkInterfaces: [{
+                reference: {
+                  group: "network.azure.com"
+                  kind:  "NetworkInterface"
+                  name:  parameter.vmName + "-nic"
+                }
+              }]
+            }
+
+            operatorSpec: {}
+          }
+        }
+
+        // Output the NetworkInterface as an additional resource
+        outputs: nic: {
+          apiVersion: "network.azure.com/v1api20240301"
+          kind:       "NetworkInterface"
+          metadata: {
+            name:      parameter.vmName + "-nic"
+            namespace: context.namespace
+            annotations: {
+              "serviceoperator.azure.com/credential-from": parameter.credential.name
+            }
+          }
+          spec: {
+            azureName: parameter.vmName + "-nic"
+            location:  parameter.location
+            owner: {
+              armId: "/subscriptions/" + parameter.subscriptionId + "/resourceGroups/" + parameter.resourceGroup
+            }
+            tags: parameter.tags
+
+            ipConfigurations: [{
+              name: "ipconfig1"
+              subnet: {
+                reference: {
+                  armId: "/subscriptions/" + parameter.subscriptionId + "/resourceGroups/" + parameter.network.vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + parameter.network.vnetName + "/subnets/" + parameter.network.subnetName
+                }
+              }
+            }]
+
+            operatorSpec: {}
+          }
+        }
+
+        // Optionally output PublicIPAddress if enabled
+        if parameter.publicIP.enabled {
+          outputs: publicip: {
+            apiVersion: "network.azure.com/v1api20220701"
+            kind:       "PublicIPAddress"
+            metadata: {
+              name:      parameter.vmName + "-pip"
+              namespace: context.namespace
+              annotations: {
+                "serviceoperator.azure.com/credential-from": parameter.credential.name
+              }
+            }
+            spec: {
+              azureName: parameter.vmName + "-pip"
+              location:  parameter.location
+              owner: {
+                armId: "/subscriptions/" + parameter.subscriptionId + "/resourceGroups/" + parameter.resourceGroup
+              }
+              tags: parameter.tags
+              sku: {
+                name: parameter.publicIP.sku
+              }
+              publicIPAllocationMethod: "Static"
+              operatorSpec: {}
+            }
+          }
+        }
+
+        // ========== CUE PATTERNS: PARAMETER SCHEMA ==========
+        parameter: {
+          // Required parameters
+          subscriptionId: string
+          resourceGroup:  string & =~"^rg-.*" // Policy: must start with rg-
+          vmName:         string & =~"^[a-z0-9-]{3,64}$" // Policy: valid VM name
+          location:       *"eastus" | string
+          
+          // ========== USER-FRIENDLY SIZE SELECTION ==========
+          // Users specify "small", "medium", "large" instead of Azure SKUs
+          vmSize: *"small" | "small" | "medium" | "large"
+          
+          // Optional: Environment-aware sizing
+          environment?: "dev" | "prod"
+          
+          adminUsername: *"azureuser" | string
+          adminPasswordSecret: {
+            name: string | *"vm-admin-password"
+            key:  string | *"password"
+          }
+          osDiskSizeGB: *30 | int & >=30 & <=1024 // Policy: between 30-1024 GB
+          storageAccountType: *"Premium_LRS" | "Standard_LRS" | "StandardSSD_LRS" | "Premium_LRS"
+
+          // Image reference with Ubuntu default
+          imageReference: {
+            publisher: *"Canonical" | string
+            offer:     *"0001-com-ubuntu-server-jammy" | string
+            sku:       *"22_04-lts-gen2" | string
+            version:   *"latest" | string
+          }
+
+          // Network configuration (brownfield)
+          network: {
+            vnetResourceGroup: string
+            vnetName:          string
+            subnetName:        string
+          }
+
+          // Public IP configuration (disabled by default)
+          publicIP: {
+            enabled: *false | bool // Policy: no public IP by default
+            sku:     *"Standard" | "Basic" | "Standard"
+          }
+
+          // ========== USER TAGS (merged with platform defaults) ==========
+          tags?: {
+            [string]: string
+          }
+
+          // ASO2 Credential reference
+          credential: {
+            name:      string | *"aso-credential-catalina-vault-sqa"
+            namespace: string | *"azureserviceoperator-system"
+          }
+        }

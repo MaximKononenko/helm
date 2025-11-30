@@ -19,7 +19,7 @@ spec:
           apiVersion: "batch/v1"
           kind:       "Job"
           spec: {
-            backoffLimit: 1
+            backoffLimit: 3
             ttlSecondsAfterFinished: 3600
             template: {
               spec: {
@@ -27,16 +27,23 @@ spec:
                 serviceAccountName: "vela-timoni-runner"
                 containers: [{
                   name:  "timoni"
-                  image: "ghcr.io/stefanprodan/timoni:v0.23.0"
+                  image: "catalina.azurecr.io/timoni:v0.23.0-alpine"
                   command: ["/bin/sh", "-c"]
                   args: [
-                    "echo '" + json.Marshal(parameter.values) + "' > values.json && " +
-                    "timoni apply " + context.name + " " + parameter.url + " --version " + parameter.version + " --values values.json --approve"
+                    "cat > values.cue <<'EOF'\n" +
+                    "values: " + json.Marshal(parameter.values) + "\n" +
+                    "EOF\n" +
+                    "cat values.cue && " +
+                    "timoni apply " + context.name + " " + parameter.url + " --version " + parameter.version + " --values values.cue --namespace " + context.namespace + " --wait"
                   ]
                   env: [
                     {
                       name: "HOME"
                       value: "/tmp"
+                    },
+                    {
+                      name: "DOCKER_CONFIG"
+                      value: "/tmp/.docker"
                     },
                     if parameter.kubeconfigSecret != _|_ {
                       {
@@ -46,6 +53,11 @@ spec:
                     }
                   ]
                   volumeMounts: [
+                    {
+                      name: "docker-config"
+                      mountPath: "/tmp/.docker"
+                      readOnly: true
+                    },
                     if parameter.kubeconfigSecret != _|_ {
                       {
                         name: "kubeconfig"
@@ -56,6 +68,16 @@ spec:
                   ]
                 }]
                 volumes: [
+                  {
+                    name: "docker-config"
+                    secret: {
+                      secretName: "acr-catalina"
+                      items: [{
+                        key: ".dockerconfigjson"
+                        path: "config.json"
+                      }]
+                    }
+                  },
                   if parameter.kubeconfigSecret != _|_ {
                     {
                       name: "kubeconfig"

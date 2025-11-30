@@ -89,7 +89,6 @@ The `vela/` folder contains KubeVela-specific configuration:
    - `rbac.yaml` - Component for setting up RBAC in clusters
 
 3. **Root `*.yaml` files** - Supporting manifests
-   - `vm-crd.yaml` - Extracted VirtualMachine CRD (for quick install)
    - `azureserviceoperator_customresourcedefinitions_v2.16.0.yaml` - Full ASO2 CRD bundle
    - Other operator/controller manifests
 

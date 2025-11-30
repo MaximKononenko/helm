@@ -5,7 +5,7 @@ bundle: {
 		"vm-test": {
 			module: {
 				url:     "oci://catalina.azurecr.io/vm-module"
-				version: "0.1.6"
+				version: "0.1.8"
 			}
 			namespace: "azureserviceoperator-system"
 			values: {
