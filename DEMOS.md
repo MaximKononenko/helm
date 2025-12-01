@@ -54,7 +54,7 @@ timoni bundle delete -f bundle.cue
 
 **Use Case**: Platform Engineer tests ASO2 integration with simple infrastructure
 
-**Location**: `helm/demos/demo-infra-vm-01-timoni/`
+**Location**: `helm/demos/demo-infra-vm-02-timoni/`
 
 ### Architecture
 ```
@@ -65,7 +65,7 @@ Timoni CLI → ASO2 CRDs → Azure API → Virtual Machine
 
 ```bash
 # 1. Navigate to demo
-cd helm/demos/demo-infra-vm-01-timoni
+cd helm/demos/demo-infra-vm-02-timoni
 
 # 2. Review configuration
 cat bundle.cue
@@ -120,7 +120,7 @@ az vm show \
 
 **Use Case**: Orchestrated infrastructure provisioning with KubeVela wrapping Timoni
 
-**Location**: `helm/demos/demo-infra-vm-02-vela-timoni/`
+**Location**: `helm/demos/demo-infra-vm-03-vela-timoni/`
 
 ### Architecture
 ```
@@ -145,7 +145,7 @@ kubectl get secret acr-catalina -n azureserviceoperator-system
 
 ```bash
 # 1. Navigate to demo
-cd helm/demos/demo-infra-vm-02-vela-timoni
+cd helm/demos/demo-infra-vm-03-vela-timoni
 
 # 2. Review Application
 cat test-vm.yaml
@@ -225,7 +225,7 @@ osDisk: {
 
 **Use Case**: 🎯 **RECOMMENDED** - Self-service VM provisioning with OAM abstraction
 
-**Location**: `helm/demos/demo-infra-vm-03-vela-native/`
+**Location**: `helm/demos/demo-infra-vm-04-vela-native/`
 
 ### Architecture
 ```
@@ -246,7 +246,7 @@ cat helm/vela/CUE_PATTERNS.md
 
 ```bash
 # 1. Navigate to demo
-cd helm/demos/demo-infra-vm-03-vela-native
+cd helm/demos/demo-infra-vm-04-vela-native
 
 # 2. Review Application (simplified user interface!)
 cat test-vm-native.yaml
@@ -375,27 +375,29 @@ if parameter.publicIP.enabled {
 
 ## Demo Comparison Matrix
 
-| Feature | Demo 1<br/>App + Timoni | Demo 2<br/>Infra + Timoni | Demo 3<br/>Infra + KubeVela + Timoni | Demo 4<br/>Infra + KubeVela Native | Demo 5<br/>REST API Integration | Demo 6<br/>Traits (Policies) |
-|---------|-------------------------|---------------------------|--------------------------------------|-----------------------------------|----------------------------------|------------------------------|
-| **Use Case** | Application deployment | Infrastructure testing | Orchestrated infra | Self-service platform | UI/API integration | Composable policies |
-| **Tool** | Timoni | Timoni | KubeVela + Timoni | KubeVela | Kubernetes REST API | KubeVela Traits |
-| **Execution** | CLI/ArgoCD | CLI | Job wrapper | Controller | HTTP/REST | Controller |
-| **Bundles** | ✅ bundle.cue | ✅ bundle.cue | ❌ N/A | ❌ N/A | ❌ N/A | ❌ N/A |
-| **Create** | ✅ | ✅ | ✅ | ✅ | ✅ POST | ✅ |
-| **Update** | ✅ | ✅ | ⚠️ Manual | ✅ | ⚠️ PATCH (needs complete payload) | ✅ |
-| **Delete** | ✅ | ✅ | ⚠️ Manual | ✅ | ✅ DELETE | ✅ |
-| **OAM Abstraction** | ❌ | ❌ | ⚠️ Limited | ✅ | ✅ (via Application CRD) | ✅ |
-| **Policy Enforcement** | ⚠️ Module-level | ⚠️ Module-level | ⚠️ Module-level | ✅ CUE validation | ✅ CUE validation + RBAC | ✅ Trait-based |
-| **API Integration** | ❌ CLI only | ❌ CLI only | ⚠️ Job-based | ✅ REST API | ✅ Pure REST API | ✅ REST API |
-| **Authentication** | N/A | N/A | N/A | N/A | ✅ Bearer Token | ✅ Bearer Token |
-| **RBAC** | N/A | N/A | N/A | ⚠️ Admin-level | ✅ ServiceAccount-based | ✅ ServiceAccount-based |
-| **Traits Support** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ Primary Feature |
-| **Tag Composition** | ⚠️ Hardcoded | ⚠️ Hardcoded | ⚠️ Hardcoded | ✅ User + Platform | ✅ User + Platform | ✅ User + Platform + Traits |
-| **Separation of Concerns** | ❌ | ❌ | ❌ | ⚠️ Limited | ⚠️ Limited | ✅ Full |
-| **Policy Composability** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Mix & Match |
-| **UI-Ready** | ❌ | ❌ | ❌ | ⚠️ kubectl proxy | ✅ Direct HTTPS | ✅ Direct HTTPS |
-| **Complexity** | Low | Low | High | Medium | Medium | Medium |
-| **Best For** | Developers | Testing | ❌ Not recommended | Platform engineering | UI/Frontend integration | Enterprise governance |
+| Feature | Demo 1<br/>App + Timoni | Demo 2<br/>Infra + Timoni | Demo 3<br/>Infra + KubeVela + Timoni | Demo 4<br/>Infra + KubeVela Native | Demo 5<br/>REST API Integration | Demo 6<br/>Traits (Policies) | Demo 7<br/>Import Existing |
+|---------|-------------------------|---------------------------|--------------------------------------|-----------------------------------|----------------------------------|------------------------------|----------------------------|
+| **Use Case** | Application deployment | Infrastructure testing | Orchestrated infra | Self-service platform | UI/API integration | Composable policies | Brownfield migration |
+| **Tool** | Timoni | Timoni | KubeVela + Timoni | KubeVela | Kubernetes REST API | KubeVela Traits | asoctl + ASO2 |
+| **Execution** | CLI/ArgoCD | CLI | Job wrapper | Controller | HTTP/REST | Controller | CLI → Adoption |
+| **Bundles** | ✅ bundle.cue | ✅ bundle.cue | ❌ N/A | ❌ N/A | ❌ N/A | ❌ N/A | ❌ N/A |
+| **Create** | ✅ | ✅ | ✅ | ✅ | ✅ POST | ✅ | ✅ Adopt (no recreation) |
+| **Update** | ✅ | ✅ | ⚠️ Manual | ✅ | ⚠️ PATCH (needs complete payload) | ✅ | ✅ After adoption |
+| **Delete** | ✅ | ✅ | ⚠️ Manual | ✅ | ✅ DELETE | ✅ | ⚠️ Optional (detach-on-delete) |
+| **OAM Abstraction** | ❌ | ❌ | ⚠️ Limited | ✅ | ✅ (via Application CRD) | ✅ | ✅ (after conversion) |
+| **Policy Enforcement** | ⚠️ Module-level | ⚠️ Module-level | ⚠️ Module-level | ✅ CUE validation | ✅ CUE validation + RBAC | ✅ Trait-based | ✅ Can add traits |
+| **API Integration** | ❌ CLI only | ❌ CLI only | ⚠️ Job-based | ✅ REST API | ✅ Pure REST API | ✅ REST API | ⚠️ CLI then REST |
+| **Authentication** | N/A | N/A | N/A | N/A | ✅ Bearer Token | ✅ Bearer Token | ✅ Azure auth |
+| **RBAC** | N/A | N/A | N/A | ⚠️ Admin-level | ✅ ServiceAccount-based | ✅ ServiceAccount-based | ✅ ASO credentials |
+| **Traits Support** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ Primary Feature | ✅ After adoption |
+| **Tag Composition** | ⚠️ Hardcoded | ⚠️ Hardcoded | ⚠️ Hardcoded | ✅ User + Platform | ✅ User + Platform | ✅ User + Platform + Traits | ✅ Preserves existing |
+| **Separation of Concerns** | ❌ | ❌ | ❌ | ⚠️ Limited | ⚠️ Limited | ✅ Full | ✅ Full (after conversion) |
+| **Policy Composability** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Mix & Match | ✅ Mix & Match |
+| **UI-Ready** | ❌ | ❌ | ❌ | ⚠️ kubectl proxy | ✅ Direct HTTPS | ✅ Direct HTTPS | ⚠️ Backend script |
+| **Downtime Risk** | N/A | N/A | N/A | N/A | N/A | N/A | ✅ Zero downtime |
+| **Terraform Migration** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Primary use case |
+| **Complexity** | Low | Low | High | Medium | Medium | Medium | Low (automated) |
+| **Best For** | Developers | Testing | ❌ Not recommended | Platform engineering | UI/Frontend integration | Enterprise governance | Migration & Adoption |
 
 ---
 
@@ -509,7 +511,7 @@ No CLI required - pure API calls!
 
 **Use Case**: 🚀 **UI INTEGRATION** - REST API calls for platform self-service
 
-**Location**: `helm/demos/demo-infra-vm-04-api/`
+**Location**: `helm/demos/demo-infra-vm-05-api/`
 
 ### Architecture
 ```
@@ -530,7 +532,7 @@ Azure Resources
 
 ```bash
 # 1. Apply RBAC resources
-kubectl apply -f helm/demos/demo-infra-vm-04-api/rbac.yaml
+kubectl apply -f helm/demos/demo-infra-vm-05-api/rbac.yaml
 
 # 2. Create service account token (dynamic - 10 minute expiry)
 TOKEN=$(kubectl create token platform-api-user \
@@ -570,7 +572,7 @@ The `rbac.yaml` creates:
 
 ```bash
 # 1. Navigate to demo
-cd helm/demos/demo-infra-vm-04-api
+cd helm/demos/demo-infra-vm-05-api
 
 # 2. Review API payloads
 cat vm-create.json   # POST payload
@@ -736,7 +738,7 @@ tags: {
 
 **Use Case**: 🎯 **COMPOSABLE POLICIES** - Add cross-cutting concerns without modifying ComponentDefinitions
 
-**Location**: `helm/demos/demo-infra-vm-05-traits/`
+**Location**: `helm/demos/demo-infra-vm-06-traits/`
 
 ### Architecture
 ```
@@ -788,7 +790,7 @@ kubectl get traitdefinition -n vela-system
 
 ```bash
 # 1. Navigate to demo
-cd helm/demos/demo-infra-vm-05-traits
+cd helm/demos/demo-infra-vm-06-traits
 
 # 2. Review Application with all traits
 cat vm-with-all-traits.yaml
@@ -984,17 +986,281 @@ az resource list --tag ComplianceFramework=sox -o table
 
 ---
 
+## Demo 7: Importing Existing VMs (Brownfield Migration)
+
+**Use Case**: 🎯 **ADOPT WITHOUT RECREATION** - Import existing VMs into KubeVela management
+
+**Location**: `helm/demos/demo-infra-vm-07-import/`
+
+### Architecture
+```
+Existing Azure VM
+    ↓
+asoctl import (generate YAML)
+    ↓
+ASO2 CRDs (adopt existing resource)
+    ↓
+No recreation - immediate management
+    ↓
+Optional: Convert to ComponentDefinition
+```
+
+### What is Adoption?
+
+**Adoption** lets ASO2 manage existing Azure resources without recreation:
+- **No Downtime**: Resources stay running during import
+- **No Data Loss**: Existing disks, configurations preserved
+- **Similar to Terraform Import**: But with automatic configuration generation
+- **Detach-on-Delete**: Optional protection against accidental deletion
+
+### Prerequisites
+
+```bash
+# 1. Install asoctl CLI
+curl -L https://github.com/Azure/azure-service-operator/releases/latest/download/asoctl-linux-amd64.gz -o /tmp/asoctl.gz
+gunzip /tmp/asoctl.gz
+sudo install -o root -g root -m 0755 /tmp/asoctl /usr/local/bin/asoctl
+
+# 2. Verify installation
+asoctl version
+
+# 3. Ensure Azure CLI is authenticated
+az account show
+```
+
+### Import Workflow
+
+#### Step 1: Import Existing VM
+
+```bash
+# Navigate to demo
+cd helm/demos/demo-infra-vm-07-import
+
+# Option A: Use automated script
+./import-existing-vm.sh
+
+# Option B: Manual import
+export RESOURCE_GROUP="rg-existing-vms"
+export VM_NAME="existing-vm-01"
+
+# Get VM ARM ID
+VM_ARM_ID=$(az vm show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$VM_NAME" \
+  --query id -o tsv)
+
+# Import configuration
+asoctl import azure-resource "$VM_ARM_ID" \
+  --output "imported-${VM_NAME}.yaml" \
+  --namespace azureserviceoperator-system \
+  --annotation "serviceoperator.azure.com/reconcile-policy=detach-on-delete" \
+  --label "managed-by=kubevela" \
+  --verbose
+```
+
+**What gets imported:**
+- ✅ VirtualMachine resource
+- ✅ NetworkInterface
+- ✅ OS Disk
+- ✅ Data Disks (if any)
+- ✅ All current tags
+- ✅ Complete configuration
+
+#### Step 2: Apply to Kubernetes
+
+```bash
+# Apply imported resources
+kubectl apply -f imported-existing-vm-01.yaml
+
+# Verify adoption (no Azure changes)
+kubectl get virtualmachine.compute.azure.com existing-vm-01 -n azureserviceoperator-system
+
+# Check status - should show "Ready" immediately
+kubectl describe virtualmachine.compute.azure.com existing-vm-01 -n azureserviceoperator-system
+```
+
+**Key Point**: ASO adopts the existing VM by matching name and ARM ID. No recreation occurs.
+
+#### Step 3: Convert to ComponentDefinition (Optional)
+
+```bash
+# Use conversion script
+./convert-to-definition.sh imported-existing-vm-01.yaml
+
+# This generates vm-with-definition.yaml using azure-vm ComponentDefinition
+
+# Delete old raw resources
+kubectl delete -f imported-existing-vm-01.yaml
+
+# Apply new Application (ASO will adopt, not recreate)
+kubectl apply -f vm-with-definition.yaml
+```
+
+### Reconcile Policy Options
+
+**Default (Manage + Delete)**:
+```yaml
+# No annotation needed
+metadata:
+  name: my-vm
+```
+- ASO manages the VM
+- Deleting the CR **deletes the Azure VM**
+
+**Detach-on-Delete (Manage Only)**:
+```yaml
+metadata:
+  annotations:
+    serviceoperator.azure.com/reconcile-policy: detach-on-delete
+```
+- ASO manages the VM
+- Deleting the CR **leaves Azure VM intact**
+- Good for testing or gradual migration
+
+### Migration Scenarios
+
+#### Scenario 1: Terraform → KubeVela
+
+```bash
+# 1. Identify Terraform-managed VMs
+terraform state list | grep azurerm_virtual_machine
+
+# 2. Import to ASO
+for vm in $(terraform state list | grep azurerm_virtual_machine); do
+  VM_NAME=$(terraform state show "$vm" | grep "name =" | head -1 | awk '{print $3}' | tr -d '"')
+  # ... import logic
+done
+
+# 3. Remove from Terraform state
+terraform state rm azurerm_virtual_machine.my_vm
+
+# 4. Continue managing via KubeVela
+```
+
+#### Scenario 2: Portal-Created → Platform-Managed
+
+```bash
+# 1. List manually created VMs
+az vm list --resource-group rg-manual --query "[].name" -o tsv
+
+# 2. Bulk import
+az vm list --resource-group rg-manual --query "[].id" -o tsv | \
+  xargs -I {} asoctl import azure-resource {} \
+    --output-folder ./imported/ \
+    --namespace azureserviceoperator-system
+
+# 3. Apply all
+kubectl apply -f ./imported/
+
+# 4. Add traits for compliance
+for app in $(kubectl get application -n azureserviceoperator-system -o name); do
+  kubectl patch "$app" --type=merge -p '{"spec":{"components":[{"traits":[{"type":"cost-tracking"}]}]}}'
+done
+```
+
+#### Scenario 3: Gradual Migration with Protection
+
+```bash
+# Import with detach-on-delete for safety
+asoctl import azure-resource "$VM_ARM_ID" \
+  --annotation "serviceoperator.azure.com/reconcile-policy=detach-on-delete"
+
+# Test management (tags, updates)
+kubectl patch virtualmachine.compute.azure.com my-vm -p '{"spec":{"tags":{"Test":"true"}}}'
+
+# Verify in Azure
+az vm show --name my-vm --query tags
+
+# Once confident, remove protection
+kubectl annotate virtualmachine.compute.azure.com my-vm \
+  serviceoperator.azure.com/reconcile-policy-
+```
+
+### Verification
+
+```bash
+# Check adoption status
+kubectl get virtualmachine.compute.azure.com -n azureserviceoperator-system
+
+# Expected: Ready=True, no provisioning changes in Azure
+az vm show --resource-group rg-existing --name existing-vm-01 \
+  --query provisioningState -o tsv
+# Output: Succeeded (unchanged)
+
+# Test management
+kubectl patch virtualmachine.compute.azure.com existing-vm-01 \
+  -n azureserviceoperator-system \
+  --type=merge \
+  -p '{"spec":{"tags":{"ManagedBy":"kubevela"}}}'
+
+# Verify tag sync to Azure
+az vm show --resource-group rg-existing --name existing-vm-01 \
+  --query "tags.ManagedBy" -o tsv
+# Output: kubevela
+```
+
+### Key Benefits
+
+1. **Zero Downtime**: VMs stay running during adoption
+2. **Automatic Config**: No manual YAML writing required
+3. **Complete Import**: Child resources (disks, NICs) included
+4. **Safe Testing**: detach-on-delete prevents accidental deletion
+5. **Trait Integration**: Can add policies after adoption
+6. **GitOps Ready**: Import once, manage forever via Git
+
+### Comparison: Terraform Import vs ASO Adoption
+
+| Feature | Terraform Import | ASO Adoption |
+|---------|------------------|--------------|
+| **Configuration Generation** | Manual (write HCL) | Automatic (asoctl) |
+| **Recreation Risk** | High (config mismatch) | None (matches by ARM ID) |
+| **Child Resources** | One-by-one import | Auto-discovered |
+| **State Management** | Separate backend | Kubernetes etcd |
+| **Drift Detection** | terraform plan | ASO reconciliation |
+| **GitOps Integration** | Requires atlantis/similar | Native Kubernetes |
+| **Rollback** | terraform state manipulation | kubectl rollout undo |
+
+### Common Issues
+
+**Issue**: `Failed to adopt - resource already exists`
+```bash
+# Solution: Delete conflicting Kubernetes resource first
+kubectl delete virtualmachine.compute.azure.com conflicting-vm -n azureserviceoperator-system
+```
+
+**Issue**: `Import succeeds but Ready=False`
+```bash
+# Check conditions
+kubectl describe virtualmachine.compute.azure.com my-vm -n azureserviceoperator-system
+
+# Common causes:
+# - Invalid credential reference
+# - Missing ASO permissions
+# - Network/subnet not found
+```
+
+**Issue**: `Accidental deletion of Azure resource`
+```bash
+# Prevention: Always use detach-on-delete during testing
+metadata:
+  annotations:
+    serviceoperator.azure.com/reconcile-policy: detach-on-delete
+```
+
+---
+
 ## Next Steps
 
 1. ✅ **Demo 4 Testing Complete**: Full CUD lifecycle validated via REST API
 2. ✅ **Traits Demonstrated**: Backup, Cost, Security, Monitoring
-3. **Test Traits**: Apply TraitDefinitions and validate tag merging
-4. **Improve PATCH Payload**: Include all required properties in vm-update.json
-5. **Create UI Mockups**: Show how users interact with the platform
-6. **Policy Enforcement**: Admission webhook to require traits
-7. **Enhanced RBAC**: Namespace-scoped roles for tenant isolation
-8. **Cost Estimation**: Pre-deployment cost calculation
-9. **Approval Workflow**: Multi-stage approvals for expensive resources
+3. ✅ **Import Workflow**: Adopt existing VMs without recreation
+4. **Test Traits**: Apply TraitDefinitions and validate tag merging
+5. **Bulk Migration**: Import production Terraform-managed infrastructure
+6. **Create UI Mockups**: Show how users interact with the platform
+7. **Policy Enforcement**: Admission webhook to require traits
+8. **Enhanced RBAC**: Namespace-scoped roles for tenant isolation
+9. **Cost Estimation**: Pre-deployment cost calculation
+10. **Approval Workflow**: Multi-stage approvals for expensive resources
 
 ---
 
@@ -1006,26 +1272,33 @@ az resource list --tag ComplianceFramework=sox -o table
   - `helm/vela/definitions/rbac.yaml` (ServiceAccount and permissions)
 
 - **Applications**:
-  - `helm/demos/demo-infra-vm-02-vela-timoni/test-vm.yaml` (Demo 3)
-  - `helm/demos/demo-infra-vm-03-vela-native/test-vm-native.yaml` (Demo 4)
-  - `helm/demos/demo-infra-vm-04-api/vm-create.json` (Demo 5 - POST)
-  - `helm/demos/demo-infra-vm-04-api/vm-update.json` (Demo 5 - PATCH)
-  - `helm/demos/demo-infra-vm-05-traits/vm-with-all-traits.yaml` (Demo 6 - Full traits)
-  - `helm/demos/demo-infra-vm-05-traits/vm-with-minimal-traits.yaml` (Demo 6 - Minimal)
+  - `helm/demos/demo-infra-vm-03-vela-timoni/test-vm.yaml` (Demo 3)
+  - `helm/demos/demo-infra-vm-04-vela-native/test-vm-native.yaml` (Demo 4)
+  - `helm/demos/demo-infra-vm-05-api/vm-create.json` (Demo 5 - POST)
+  - `helm/demos/demo-infra-vm-05-api/vm-update.json` (Demo 5 - PATCH)
+  - `helm/demos/demo-infra-vm-06-traits/vm-with-all-traits.yaml` (Demo 6 - Full traits)
+  - `helm/demos/demo-infra-vm-06-traits/vm-with-minimal-traits.yaml` (Demo 6 - Minimal)
+  - `helm/demos/demo-infra-vm-06-traits/vm-with-data-disks.yaml` (Demo 6 - Data disks)
 
 - **RBAC**:
-  - `helm/demos/demo-infra-vm-04-api/rbac.yaml` (ServiceAccount, ClusterRole, ClusterRoleBinding, Token Secret)
+  - `helm/demos/demo-infra-vm-05-api/rbac.yaml` (ServiceAccount, ClusterRole, ClusterRoleBinding, Token Secret)
 
 - **Traits (Policies)**:
   - `helm/vela/definitions/backup-policy-trait.yaml` (Backup configuration)
   - `helm/vela/definitions/cost-tracking-trait.yaml` (Cost allocation tags)
   - `helm/vela/definitions/security-baseline-trait.yaml` (Security and compliance)
-  - `helm/vela/definitions/monitoring-trait.yaml` (Alerting and metrics)
+  - `helm/vela/definitions/monitoring-trait.yaml` (Alerting and metrics with Datadog/Prometheus)
+
+- **Import/Migration (Demo 7)**:
+  - `helm/demos/demo-infra-vm-07-import/import-existing-vm.sh` (Automated import script)
+  - `helm/demos/demo-infra-vm-07-import/convert-to-definition.sh` (Convert to ComponentDefinition)
+  - `helm/demos/demo-infra-vm-07-import/README.md` (Import documentation and use cases)
 
 - **Automation**:
-  - `helm/demos/demo-infra-vm-04-api/test-api.sh` (Full REST API test script)
-  - `helm/demos/demo-infra-vm-04-api/README.md` (API documentation with JavaScript examples)
-  - `helm/demos/demo-infra-vm-05-traits/README.md` (Traits documentation and use cases)
+  - `helm/demos/demo-infra-vm-05-api/test-api.sh` (Full REST API test script)
+  - `helm/demos/demo-infra-vm-05-api/README.md` (API documentation with JavaScript examples)
+  - `helm/demos/demo-infra-vm-06-traits/README.md` (Traits documentation and use cases)
+  - `helm/demos/demo-infra-vm-06-traits/test-traits.sh` (Traits testing script)
 
 - **Timoni Modules**:
   - `helm/timoni/modules/infra/vm/` (VM module source with deleteOption: Delete)

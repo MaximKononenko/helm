@@ -1,0 +1,53 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: vm-with-disks
+  namespace: azureserviceoperator-system
+spec:
+  components:
+    - name: vm
+      type: azure-vm
+      properties:
+        vmName: "vm-disks-demo-01"
+        vmSize: "medium"
+        environment: "dev"
+        resourceGroup: "rg-tst-eastus-istio-compute"
+        subscriptionId: "a50f971b-376d-4d05-ac33-1e9fcfb8f32c"
+        location: "eastus"
+        network:
+          vnetResourceGroup: "rg-tst-eastus-istio-network"
+          vnetName: "vn-tst-eastus-istio"
+          subnetName: "sn-tst-eastus-istio-aks"
+        tags:
+          Owner: "database-team"
+          Purpose: "postgresql-server"
+        # Data disks (automatically created and attached)
+        dataDisks:
+          - sizeGB: 256
+            storageAccountType: Premium_LRS
+            caching: ReadWrite # Database workload
+          - sizeGB: 128
+            storageAccountType: StandardSSD_LRS
+            caching: None # Log files don't benefit from caching
+      # Attach traits
+      traits:
+        # Cost tracking
+        - type: cost-tracking
+          properties:
+            costCenter: "ENG-001"
+            department: "Engineering"
+            project: "database-migration"
+        # Backup policy for database VM
+        - type: backup-policy
+          properties:
+            enabled: "true"
+            retentionDays: 90 # Longer retention for databases
+            schedule: "0 */6 * * *" # Every 6 hours
+            vaultName: "backup-vault-databases"
+        # Security baseline
+        - type: security-baseline
+          properties:
+            securityLevel: "confidential"
+            complianceFramework: "sox"
+            dataClassification: "confidential"
+            patchingSchedule: "weekly"

@@ -169,10 +169,11 @@ Create VM with additional data disks for database workload:
 # 1. Review configuration with data disks
 cat vm-with-data-disks.yaml
 
-# Application has 3 components:
-# - vm: The virtual machine (azure-vm component)
-# - data-disk-db: 256GB Premium_LRS disk for database files
-# - data-disk-logs: 128GB StandardSSD_LRS disk for logs
+# Application has 1 component with dataDisks parameter:
+# - vm: The virtual machine with 2 data disks
+#   - Disk 0: 256GB Premium_LRS for database files (ReadWrite caching)
+#   - Disk 1: 128GB StandardSSD_LRS for logs (No caching)
+# Data disks are automatically created and attached!
 
 # 2. Create VM with data disks
 kubectl apply -f vm-with-data-disks.yaml
@@ -195,13 +196,13 @@ az vm show \
 az disk list \
   --resource-group rg-tst-eastus-istio-compute \
   --subscription a50f971b-376d-4d05-ac33-1e9fcfb8f32c \
-  --query "[?contains(name, 'vm-disks-demo-01')].{name:name, sizeGB:diskSizeGb, sku:sku.name, state:diskState, tags:tags}" \
+  --query "[?contains(name, 'vm-disks-demo-01-datadisk')].{name:name, sizeGB:diskSizeGb, sku:sku.name, state:diskState, tags:tags}" \
   -o table
 
 # Expected disks:
-# - vm-disks-demo-01-osdisk (30GB, created by VM)
-# - vm-disks-demo-01-data-db (256GB Premium_LRS) ✅ Auto-attached
-# - vm-disks-demo-01-data-logs (128GB StandardSSD_LRS) ✅ Auto-attached
+# - vm-disks-demo-01-osdisk (30GB OS disk)
+# - vm-disks-demo-01-datadisk-0 (256GB Premium_LRS) ✅ Auto-created & attached
+# - vm-disks-demo-01-datadisk-1 (128GB StandardSSD_LRS) ✅ Auto-created & attached
 
 # 7. Wait for VM provisioning to complete (5-10 minutes)
 sleep 300
@@ -232,32 +233,36 @@ kubectl delete application.core.oam.dev vm-with-disks -n azureserviceoperator-sy
 **Disk Provisioning**:
 ```yaml
 components:
-  # Provision disks first (as separate components)
-  - name: data-disk-db
-    type: raw       # Raw ASO2 Disk resource
-    properties:
-      apiVersion: compute.azure.com/v1api20240302
-      kind: Disk
-      spec:
-        diskSizeGB: 256
-        sku:
-          name: Premium_LRS
-  
-  # VM references disks for automatic attachment
   - name: vm
     type: azure-vm
     properties:
       vmName: "my-vm"
+      vmSize: "medium"
+      # ... other properties ...
+      
+      # Data disks (automatically created and attached)
       dataDisks:
-        - name: data-disk-db      # Reference by name
-          caching: ReadWrite      # Caching policy
+        - sizeGB: 256
+          storageAccountType: Premium_LRS
+          caching: ReadWrite      # Database workload
+        
+        - sizeGB: 128
+          storageAccountType: StandardSSD_LRS
+          caching: None           # Log files
 ```
 
-**Automatic Disk Attachment**:
-- Disks are automatically attached during VM creation
-- ComponentDefinition sets `createOption: "Attach"` and `deleteOption: "Delete"`
-- LUN (Logical Unit Number) assigned automatically by index
-- Caching policy configurable per disk (ReadWrite/ReadOnly/None)
+**How It Works**:
+- ComponentDefinition automatically creates Disk resources via `outputs`
+- Disks are named: `{vmName}-datadisk-{index}` (e.g., `my-vm-datadisk-0`)
+- LUN (Logical Unit Number) assigned automatically by array index
+- Disks are attached with `createOption: "Attach"` and `deleteOption: "Delete"`
+- Tags from VM (including traits) are inherited by disks
+- Cleanup: All disks deleted automatically when VM is deleted
+
+**Caching Policies**:
+- `ReadWrite` (default): Best for database files and application data
+- `ReadOnly`: Best for read-heavy workloads
+- `None`: Best for log files and sequential writes
 
 **Tag Inheritance**:
 - Data disks inherit tags from Application properties
@@ -366,6 +371,19 @@ Your UI can present traits as checkboxes:
 ├─────────────────────────────────────┤
 │ Name: [vm-user-123            ]     │
 │ Size: [Standard_B2s ▼]              │
+│                                     │
+│ Data Disks:                         │
+│ ☑ Add data disk 1                   │
+│   Size: [256] GB                    │
+│   Type: [Premium_LRS ▼]             │
+│   Caching: [ReadWrite ▼]            │
+│                                     │
+│ ☐ Add data disk 2                   │
+│   Size: [128] GB                    │
+│   Type: [StandardSSD_LRS ▼]         │
+│   Caching: [None ▼]                 │
+│                                     │
+│ [+ Add another disk]                │
 │                                     │
 │ Policies:                           │
 │ ☑ Enable Backups                    │

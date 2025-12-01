@@ -118,7 +118,7 @@ spec:
               }
               
               // ========== DATA DISKS (optional) ==========
-              if parameter.dataDisks != _|_ {
+              if parameter.dataDisks != _|_ if len(parameter.dataDisks) > 0 {
                 dataDisks: [
                   for idx, disk in parameter.dataDisks {
                     createOption: "Attach"
@@ -128,7 +128,7 @@ spec:
                       reference: {
                         group: "compute.azure.com"
                         kind:  "Disk"
-                        name:  disk.name
+                        name:  parameter.vmName + "-datadisk-" + strconv.FormatInt(idx, 10)
                       }
                     }
                     caching: disk.caching | "ReadWrite"
@@ -211,6 +211,39 @@ spec:
           }
         }
 
+        // ========== OUTPUT DATA DISKS (automatically created) ==========
+        if parameter.dataDisks != _|_ if len(parameter.dataDisks) > 0 {
+          for idx, disk in parameter.dataDisks {
+            outputs: "datadisk\(idx)": {
+              apiVersion: "compute.azure.com/v1api20240302"
+              kind:       "Disk"
+              metadata: {
+                name:      parameter.vmName + "-datadisk-" + strconv.FormatInt(idx, 10)
+                namespace: context.namespace
+                annotations: {
+                  "serviceoperator.azure.com/credential-from": parameter.credential.name
+                }
+              }
+              spec: {
+                azureName: parameter.vmName + "-datadisk-" + strconv.FormatInt(idx, 10)
+                location:  parameter.location
+                owner: {
+                  armId: "/subscriptions/" + parameter.subscriptionId + "/resourceGroups/" + parameter.resourceGroup
+                }
+                sku: {
+                  name: disk.storageAccountType
+                }
+                diskSizeGB: disk.sizeGB
+                creationData: {
+                  createOption: "Empty"
+                }
+                tags: _computedTags
+                operatorSpec: {}
+              }
+            }
+          }
+        }
+
         // ========== CUE PATTERNS: PARAMETER SCHEMA ==========
         parameter: {
           // Required parameters
@@ -256,10 +289,11 @@ spec:
           }
 
           // ========== DATA DISKS (optional) ==========
-          // Reference existing Disk resources to attach to VM
+          // Automatically creates and attaches data disks to VM
           dataDisks?: [...{
-            name:     string  // Name of the Disk resource
-            caching?: *"ReadWrite" | "None" | "ReadOnly"
+            sizeGB:              int & >=1 & <=32767 // Disk size in GB
+            storageAccountType:  *"Premium_LRS" | "Standard_LRS" | "StandardSSD_LRS" | "Premium_LRS" | "UltraSSD_LRS"
+            caching?:            *"ReadWrite" | "None" | "ReadOnly"
           }]
 
           // ========== USER TAGS (merged with platform defaults) ==========
