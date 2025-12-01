@@ -86,6 +86,12 @@ kubectl apply -f ../../vela/definitions/monitoring-trait.yaml
 
 # 2. Verify traits are available
 kubectl get traitdefinition -n vela-system
+
+# 3. (For Demo 3 only) Apply Disk CRD for data disk management
+kubectl apply -f ../../aso2/live/disk-crd.yaml
+
+# 4. Verify Disk CRD is available
+kubectl api-resources | grep disks
 ```
 
 ## Demo 1: Full Traits Stack
@@ -181,39 +187,47 @@ kubectl apply -f vm-with-data-disks.yaml
 # 3. Monitor Application
 kubectl get application.core.oam.dev vm-with-disks -n azureserviceoperator-system
 
-# 4. Check all resources (VM + Disks)
-kubectl get virtualmachine,disk -n azureserviceoperator-system | grep vm-disks-demo-01
+# 4. Check Disk resources (created as separate ASO2 resources)
+kubectl get disks.compute.azure.com -n azureserviceoperator-system
 
-# 5. Verify VM in Azure
-az vm show \
-  --resource-group rg-tst-eastus-istio-compute \
-  --name vm-disks-demo-01 \
-  --subscription a50f971b-376d-4d05-ac33-1e9fcfb8f32c \
-  --query '{name:name, size:hardwareProfile.vmSize, tags:tags}' \
-  -o json
+# Expected output:
+# vm-disks-demo-01-datadisk-0 (256GB Premium_LRS)
+# vm-disks-demo-01-datadisk-1 (128GB StandardSSD_LRS)
 
-# 6. Verify disks in Azure
-az disk list \
-  --resource-group rg-tst-eastus-istio-compute \
-  --subscription a50f971b-376d-4d05-ac33-1e9fcfb8f32c \
-  --query "[?contains(name, 'vm-disks-demo-01-datadisk')].{name:name, sizeGB:diskSizeGb, sku:sku.name, state:diskState, tags:tags}" \
-  -o table
-
-# Expected disks:
-# - vm-disks-demo-01-osdisk (30GB OS disk)
-# - vm-disks-demo-01-datadisk-0 (256GB Premium_LRS) ✅ Auto-created & attached
-# - vm-disks-demo-01-datadisk-1 (128GB StandardSSD_LRS) ✅ Auto-created & attached
-
-# 7. Wait for VM provisioning to complete (5-10 minutes)
+# 5. Wait for VM provisioning (5-10 minutes)
 sleep 300
 
-# 8. Verify disks are automatically attached
+# 6. Verify VM and data disks in Azure
 az vm show \
   --resource-group rg-tst-eastus-istio-compute \
   --name vm-disks-demo-01 \
   --subscription a50f971b-376d-4d05-ac33-1e9fcfb8f32c \
-  --query 'storageProfile.dataDisks[].{name:name, lun:lun, sizeGB:diskSizeGb, caching:caching}' \
-  -o table
+  --query '{name:name, size:hardwareProfile.vmSize, dataDisks:storageProfile.dataDisks[].{name:name,sizeGB:diskSizeGb,caching:caching,storageType:managedDisk.storageAccountType}}' \
+  -o json
+
+# Expected output shows 2 data disks attached:
+# - vm-disks-demo-01-datadisk-0: 256GB Premium_LRS, ReadWrite caching
+# - vm-disks-demo-01-datadisk-1: 128GB StandardSSD_LRS, None caching
+
+# 7. Verify tag inheritance on data disks
+az disk show \
+  --resource-group rg-tst-eastus-istio-compute \
+  --name vm-disks-demo-01-datadisk-0 \
+  --subscription a50f971b-376d-4d05-ac33-1e9fcfb8f32c \
+  --query '{name:name, tags:tags}' \
+  -o json
+
+# Data disks inherit User + Platform tags (not trait tags)
+
+# 8. Check VM tags include traits
+az vm show \
+  --resource-group rg-tst-eastus-istio-compute \
+  --name vm-disks-demo-01 \
+  --subscription a50f971b-376d-4d05-ac33-1e9fcfb8f32c \
+  --query 'tags' \
+  -o json
+
+# VM has User + Platform + Trait tags (27 total)
 
 # 9. Cleanup
 kubectl delete application.core.oam.dev vm-with-disks -n azureserviceoperator-system
@@ -461,13 +475,30 @@ traits:
       complianceFramework: pci-dss
 ```
 
+## Key Learnings
+
+### Data Disk Implementation
+- **Separate Resources**: Data disks created as `Disk` CRD resources, not inline in VM spec
+- **Automatic Attachment**: VM references disks via `createOption: "Attach"` and `managedDisk.reference`
+- **Tag Inheritance**: Data disks inherit User + Platform tags from ComponentDefinition's `_computedTags`
+- **Trait Tags**: Applied only to VM, not to data disks (trait patches target VM spec)
+- **Lifecycle**: Disks deleted automatically via `deleteOption: "Delete"` in VM spec
+- **ASO2 Operator**: Must restart operator after applying new CRDs for webhook registration
+
+### CUE Pattern Fixes
+- **Default Values**: Cannot use `|` operator in patch sections
+- **Correct Pattern**: Use conditional `if parameter.field != _|_` with separate assignment
+- **Outputs Structure**: Dynamic outputs must be built at top level with `for` comprehension
+
 ## Next Steps
 
 1. ✅ **Traits Demonstrated**: Backup, Cost, Security, Monitoring
-2. [ ] **Policy Enforcement**: Create admission webhook to require traits
-3. [ ] **Workflow Integration**: Approval process for restricted security levels
-4. [ ] **Cost Estimation**: Calculate monthly cost based on vmSize + backup + monitoring
-5. [ ] **Azure Integration**: Connect trait ConfigMaps to Azure services
+2. ✅ **Data Disks**: Separate resource management with tag inheritance
+3. ✅ **ASO2 CRDs**: Organized under `helm/aso2/live/` for lifecycle management
+4. [ ] **Policy Enforcement**: Create admission webhook to require traits
+5. [ ] **Workflow Integration**: Approval process for restricted security levels
+6. [ ] **Cost Estimation**: Calculate monthly cost based on vmSize + backup + monitoring
+7. [ ] **Azure Integration**: Connect trait ConfigMaps to Azure services
    - Backup vault automation
    - Log Analytics workspace configuration
    - Azure Monitor alert rules
@@ -482,5 +513,6 @@ traits:
   - `helm/vela/definitions/monitoring-trait.yaml`
 
 - **Applications**:
-  - `helm/demos/demo-infra-vm-05-traits/vm-with-all-traits.yaml`
-  - `helm/demos/demo-infra-vm-05-traits/vm-with-minimal-traits.yaml`
+  - `helm/demos/demo-infra-vm-06-traits/vm-with-all-traits.yaml`
+  - `helm/demos/demo-infra-vm-06-traits/vm-with-minimal-traits.yaml`
+  - `helm/demos/demo-infra-vm-06-traits/vm-with-data-disks.yaml`

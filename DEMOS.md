@@ -857,6 +857,49 @@ az vm show \
 kubectl delete application.core.oam.dev vm-minimal-traits -n azureserviceoperator-system
 ```
 
+### Demo 3: Data Disks with Trait Inheritance
+
+```bash
+# 1. Review configuration with data disks
+cat vm-with-data-disks.yaml
+
+# 2. Create VM with data disks
+kubectl apply -f vm-with-data-disks.yaml
+
+# 3. Monitor
+kubectl get application.core.oam.dev vm-with-disks -n azureserviceoperator-system
+
+# 4. Check Disk resources (created as separate ASO2 resources)
+kubectl get disks.compute.azure.com -n azureserviceoperator-system
+
+# 5. Verify VM and data disks in Azure
+az vm show \
+  --resource-group rg-tst-eastus-istio-compute \
+  --name vm-disks-demo-01 \
+  --subscription a50f971b-376d-4d05-ac33-1e9fcfb8f32c \
+  --query '{name:name, size:hardwareProfile.vmSize, dataDisks:storageProfile.dataDisks[].{name:name,sizeGB:diskSizeGb,caching:caching,storageType:managedDisk.storageAccountType}}' \
+  -o json
+
+# 6. Verify tag inheritance on data disks
+az disk show \
+  --resource-group rg-tst-eastus-istio-compute \
+  --name vm-disks-demo-01-datadisk-0 \
+  --subscription a50f971b-376d-4d05-ac33-1e9fcfb8f32c \
+  --query '{name:name, sizeGB:diskSizeGb, tags:tags}' -o json
+
+# Expected: Data disk has User + Platform tags (no trait tags, traits apply to VM only)
+
+# 7. Cleanup
+kubectl delete application.core.oam.dev vm-with-disks -n azureserviceoperator-system
+```
+
+**Key Features:**
+- Data disks created as separate `Disk` resources (ASO2)
+- Automatic attachment via `createOption: "Attach"`
+- Tag inheritance: Data disks get User + Platform tags
+- Different caching modes per disk (ReadWrite, None)
+- Automatic cleanup with `deleteOption: "Delete"`
+
 ### Trait Details
 
 **1. backup-policy**

@@ -15,9 +15,9 @@ spec:
         subscriptionId: "a50f971b-376d-4d05-ac33-1e9fcfb8f32c"
         location: "eastus"
         network:
-          vnetResourceGroup: "rg-tst-eastus-istio-network"
-          vnetName: "vn-tst-eastus-istio"
-          subnetName: "sn-tst-eastus-istio-aks"
+          vnetResourceGroup: "rg-np-eastus-dashboard"
+          vnetName: "vn-np-eastus-10-166-54-0-24"
+          subnetName: "sn-tst-eastus-istio-10-166-54-0-26-aks-b"
         tags:
           Owner: "database-team"
           Purpose: "postgresql-server"

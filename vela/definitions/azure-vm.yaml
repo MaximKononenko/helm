@@ -121,6 +121,7 @@ spec:
               if parameter.dataDisks != _|_ if len(parameter.dataDisks) > 0 {
                 dataDisks: [
                   for idx, disk in parameter.dataDisks {
+                    name:         parameter.vmName + "-datadisk-" + strconv.FormatInt(idx, 10)
                     createOption: "Attach"
                     deleteOption: "Delete"
                     lun:          idx
@@ -131,7 +132,10 @@ spec:
                         name:  parameter.vmName + "-datadisk-" + strconv.FormatInt(idx, 10)
                       }
                     }
-                    caching: disk.caching | "ReadWrite"
+                    caching: *"ReadWrite" | string
+                    if disk.caching != _|_ {
+                      caching: disk.caching
+                    }
                   }
                 ]
               }
@@ -211,34 +215,35 @@ spec:
           }
         }
 
-        // ========== OUTPUT DATA DISKS (automatically created) ==========
+        // ========== OUTPUT DATA DISKS (separate resources) ==========
         if parameter.dataDisks != _|_ if len(parameter.dataDisks) > 0 {
-          for idx, disk in parameter.dataDisks {
-            outputs: "datadisk\(idx)": {
-              apiVersion: "compute.azure.com/v1api20240302"
-              kind:       "Disk"
-              metadata: {
-                name:      parameter.vmName + "-datadisk-" + strconv.FormatInt(idx, 10)
-                namespace: context.namespace
-                annotations: {
-                  "serviceoperator.azure.com/credential-from": parameter.credential.name
+          outputs: {
+            for idx, disk in parameter.dataDisks {
+              "datadisk\(idx)": {
+                apiVersion: "compute.azure.com/v1api20200930"
+                kind:       "Disk"
+                metadata: {
+                  name:      parameter.vmName + "-datadisk-" + strconv.FormatInt(idx, 10)
+                  namespace: context.namespace
+                  annotations: {
+                    "serviceoperator.azure.com/credential-from": parameter.credential.name
+                  }
                 }
-              }
-              spec: {
-                azureName: parameter.vmName + "-datadisk-" + strconv.FormatInt(idx, 10)
-                location:  parameter.location
-                owner: {
-                  armId: "/subscriptions/" + parameter.subscriptionId + "/resourceGroups/" + parameter.resourceGroup
+                spec: {
+                  azureName: parameter.vmName + "-datadisk-" + strconv.FormatInt(idx, 10)
+                  location:  parameter.location
+                  owner: {
+                    armId: "/subscriptions/" + parameter.subscriptionId + "/resourceGroups/" + parameter.resourceGroup
+                  }
+                  sku: {
+                    name: disk.storageAccountType
+                  }
+                  diskSizeGB: disk.sizeGB
+                  creationData: {
+                    createOption: "Empty"
+                  }
+                  tags: _computedTags
                 }
-                sku: {
-                  name: disk.storageAccountType
-                }
-                diskSizeGB: disk.sizeGB
-                creationData: {
-                  createOption: "Empty"
-                }
-                tags: _computedTags
-                operatorSpec: {}
               }
             }
           }

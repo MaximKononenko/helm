@@ -18,8 +18,18 @@ spec:
               CostCenter: parameter.costCenter
               Department: parameter.department
               Project: parameter.project
-              BillingCode: parameter.billingCode | "\(parameter.costCenter)-\(parameter.project)"
-              Approver: parameter.approver | "finance-team@company.com"
+              if parameter.billingCode != _|_ {
+                BillingCode: parameter.billingCode
+              }
+              if parameter.billingCode == _|_ {
+                BillingCode: "\(parameter.costCenter)-\(parameter.project)"
+              }
+              if parameter.approver != _|_ {
+                Approver: parameter.approver
+              }
+              if parameter.approver == _|_ {
+                Approver: "finance-team@company.com"
+              }
             }
           }
         }

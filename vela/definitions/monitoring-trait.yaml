@@ -20,7 +20,12 @@ spec:
               AlertContact: parameter.alertContact
               MetricsRetention: "\(parameter.metricsRetentionDays)"
               MonitoringStack: parameter.monitoringStack
-              DatadogEnv: parameter.datadogEnv | "production"
+              if parameter.datadogEnv != _|_ {
+                DatadogEnv: parameter.datadogEnv
+              }
+              if parameter.datadogEnv == _|_ {
+                DatadogEnv: "production"
+              }
             }
           }
         }
@@ -51,8 +56,8 @@ spec:
         }
         
         outputs: alertconfig: {
-          apiVersion: v1
-          kind: ConfigMap
+          apiVersion: "v1"
+          kind: "ConfigMap"
           metadata: {
             name: context.name + "-alert-config"
             namespace: context.namespace
@@ -68,7 +73,10 @@ spec:
             alert_contact: parameter.alertContact
             metrics_retention_days: "\(parameter.metricsRetentionDays)"
             monitoring_stack: parameter.monitoringStack
-            datadog_env: parameter.datadogEnv | "production"
+            datadog_env: *"production" | string
+            if parameter.datadogEnv != _|_ {
+              datadog_env: parameter.datadogEnv
+            }
             cpu_threshold: "\(parameter.cpuThreshold)"
             memory_threshold: "\(parameter.memoryThreshold)"
             disk_threshold: "\(parameter.diskThreshold)"

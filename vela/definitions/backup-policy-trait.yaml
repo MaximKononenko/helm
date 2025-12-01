@@ -16,9 +16,14 @@ spec:
             // Add backup-related tags
             tags: {
               BackupEnabled: parameter.enabled
-              BackupRetention: parameter.retentionDays
+              BackupRetention: "\(parameter.retentionDays)"
               BackupSchedule: parameter.schedule
-              BackupVault: parameter.vaultName | "default-backup-vault"
+              if parameter.vaultName != _|_ {
+                BackupVault: parameter.vaultName
+              }
+              if parameter.vaultName == _|_ {
+                BackupVault: "default-backup-vault"
+              }
             }
           }
         }
@@ -38,8 +43,8 @@ spec:
         }
         
         outputs: backupconfig: {
-          apiVersion: v1
-          kind: ConfigMap
+          apiVersion: "v1"
+          kind: "ConfigMap"
           metadata: {
             name: context.name + "-backup-config"
             namespace: context.namespace
@@ -48,7 +53,10 @@ spec:
             enabled: parameter.enabled
             retention_days: "\(parameter.retentionDays)"
             schedule: parameter.schedule
-            vault_name: parameter.vaultName | "default-backup-vault"
+            vault_name: *"default-backup-vault" | string
+            if parameter.vaultName != _|_ {
+              vault_name: parameter.vaultName
+            }
             resource_id: context.name
           }
         }

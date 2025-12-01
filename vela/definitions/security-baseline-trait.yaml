@@ -19,7 +19,12 @@ spec:
               ComplianceFramework: parameter.complianceFramework
               DataClassification: parameter.dataClassification
               PatchingSchedule: parameter.patchingSchedule
-              SecurityContact: parameter.securityContact | "security-team@company.com"
+              if parameter.securityContact != _|_ {
+                SecurityContact: parameter.securityContact
+              }
+              if parameter.securityContact == _|_ {
+                SecurityContact: "security-team@company.com"
+              }
             }
           }
         }
@@ -42,8 +47,8 @@ spec:
         }
         
         outputs: securityconfig: {
-          apiVersion: v1
-          kind: ConfigMap
+          apiVersion: "v1"
+          kind: "ConfigMap"
           metadata: {
             name: context.name + "-security-config"
             namespace: context.namespace
@@ -57,7 +62,10 @@ spec:
             compliance_framework: parameter.complianceFramework
             data_classification: parameter.dataClassification
             patching_schedule: parameter.patchingSchedule
-            security_contact: parameter.securityContact | "security-team@company.com"
+            security_contact: *"security-team@company.com" | string
+            if parameter.securityContact != _|_ {
+              security_contact: parameter.securityContact
+            }
             resource_id: context.name
             scan_enabled: "true"
           }
