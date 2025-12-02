@@ -1,0 +1,67 @@
+// Demo 1: Using Timoni module directly (single instance)
+// Deploy with: timoni apply demo-app-01-backend -n demo-app-01 -f values.cue oci://catalina.azurecr.io/classic-deployment --version 0.2.3
+
+values:
+{
+image:
+	{
+	repository:
+		"catalina.azurecr.io/cmp/backend"
+	tag:
+		"demo-app-01.187695"
+	digest:
+		""
+	pullPolicy:
+		"IfNotPresent"
+	}
+replicas:
+	1
+service:
+port:
+	5000
+containerPort:
+	5000
+probes:
+	{
+	liveness:
+		{
+		path:
+			"/health"
+		initialDelaySeconds:
+			30
+		periodSeconds:
+			10
+		}
+	readiness:
+		{
+		path:
+			"/health"
+		initialDelaySeconds:
+			5
+		periodSeconds:
+			5
+		}
+	}
+env:
+	{
+	DEBUG:
+		"false"
+	}
+resources:
+	{
+	requests:
+		{
+		cpu:
+			"100m"
+		memory:
+			"128Mi"
+		}
+	limits:
+		{
+		cpu:
+			"200m"
+		memory:
+			"256Mi"
+		}
+	}
+}

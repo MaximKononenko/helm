@@ -98,7 +98,7 @@
     8.  ✅ **Validate**: VM `vm-vela-test-01` provisioned in Azure (Standard_B2s, no public IP).
     9.  ⚠️ **Limitation**: Job-based approach doesn't handle Update/Delete lifecycle.
     10. 📝 **Cleanup**: Manual `timoni delete` required for resource deletion.
-- [ ] **3.5 VM Self-Service (KubeVela Native)**: 🎯 **NEW DEMO** - Direct ASO2 integration without Timoni:
+- [x] **3.5 VM Self-Service (KubeVela Native)**: ✅ **COMPLETED** - Direct ASO2 integration without Timoni:
     1.  ✅ **ComponentDefinition**: Created `azure-vm` with native ASO2 CRDs (no Job wrapper).
     2.  ✅ **CUE Patterns**: Implemented mappings, conditionals, loops, validation:
         - User-friendly size selection: `small/medium/large` → Azure SKUs
@@ -108,10 +108,22 @@
         - Validation: Regex for naming, constraints for disk size
     3.  ✅ **Application Template**: Simplified user interface - only essential params
     4.  ✅ **Documentation**: Created `CUE_PATTERNS.md` with examples
-    5.  [ ] **Deploy Test**: Apply native Application and validate full CUD lifecycle
-    6.  [ ] **Traits Demo**: Add policy traits (backup, cost tagging, security baseline)
-    7.  [ ] **API Integration**: Document REST API calls for UI consumption
-    8.  [ ] **Comparison**: Document benefits vs Timoni-wrapped approach
+    5.  ✅ **Deploy Test**: Native Application validated - full CUD lifecycle working
+    6.  ✅ **Traits Demo**: Implemented 4 TraitDefinitions (backup, cost, security, monitoring)
+    7.  ✅ **API Integration**: Documented REST API calls in Demo 5
+    8.  ✅ **Comparison**: Full comparison matrix in `helm/DEMOS.md`
+- [x] **3.6 Data Disk Management**: ✅ **COMPLETED** - Separate Disk resources with tag inheritance:
+    1.  ✅ **Disk CRD**: Installed compute.azure.com/v1api20200930 Disk CRD
+    2.  ✅ **ComponentDefinition Update**: Implemented separate Disk resources via outputs
+    3.  ✅ **Disk Creation**: Used `createOption: "Attach"` with managedDisk.reference
+    4.  ✅ **Tag Inheritance**: Data disks inherit User + Platform tags (not trait tags)
+    5.  ✅ **Testing**: Validated 2-disk scenario (256GB Premium_LRS, 128GB StandardSSD_LRS)
+    6.  ✅ **Documentation**: Updated Demo 6 with data disk substep and key learnings
+- [x] **3.7 ASO2 CRD Management**: ✅ **COMPLETED** - Organized CRD lifecycle:
+    1.  ✅ **Directory Structure**: Created `helm/aso2/` with live subfolder
+    2.  ✅ **CRD Organization**: Separated VM, AKS, and Disk CRDs
+    3.  ✅ **Operator Restart**: Documented webhook registration requirement
+    4.  ✅ **Documentation**: Created README with extraction examples
 
 ## Phase 4: Application Deployment (GitOps)
 - [ ] **4.1 GitOps Config**: Define the `Application` CR for `demo-app-01`.
@@ -163,27 +175,82 @@
   - Monitoring/observability
 
 ### **5.3 Use Case Patterns & Composition**
-- [ ] **5.3.1 Define Use Cases**: Document provisioning patterns:
+- [x] **5.3.1 Define Use Cases**: ✅ **COMPLETED** - Documented provisioning patterns:
     - **Greenfield**: Full provisioning (new RG, VNet, Subnet, Compute) - Platform Engineers
-    - **Brownfield**: Use existing infrastructure (existing RG, VNet, Subnet) - Self-Service
-    - **Hybrid**: Mix of new and existing resources (e.g., new compute in existing network)
+    - **Brownfield**: Use existing infrastructure (existing RG, VNet, Subnet) - Self-Service (Demo 08)
+    - **Hybrid**: Mix of new and existing resources (e.g., new compute in existing network) - Default pattern
 - [x] **5.3.2 Composition Strategy**: CUE-based approach within ComponentDefinitions:
     - ✅ Conditional logic for optional resources (public IP)
     - ✅ Mappings for user-friendly abstractions (size → SKU)
     - ✅ Environment-aware configurations (dev vs prod)
     - ✅ Validation and policy enforcement
     - 📝 See: `helm/vela/CUE_PATTERNS.md`
-- [ ] **5.3.3 Template Library**: Create reusable KubeVela Application templates:
-    - Template variables for common parameters (subscription, location, RG, etc.)
-    - Policy configurations (RBAC, network policies, backup, monitoring)
-    - Environment-specific overrides (dev, test, prod)
-- [ ] **5.3.4 Self-Service Portal**: Design developer experience:
-    - REST API integration (direct K8s API - no CLI)
-    - Input forms with validation
-    - RBAC-based resource access (Traits)
-    - Cost estimation and approval workflow
+- [x] **5.3.3 Template Library**: ✅ **COMPLETED** - Reusable KubeVela Application templates:
+    - ✅ Demo 4: Basic VM with network configuration
+    - ✅ Demo 5: REST API integration patterns
+    - ✅ Demo 6: Trait composition (3 scenarios: full, minimal, data disks)
+    - ✅ Demo 08: Import/adoption templates (8 substeps)
+- [ ] **5.3.4 Self-Service Portal (Demo 07)**: 🎯 **IN PROGRESS** - Approval workflow design:
+    - ✅ Design Discussion: Created comprehensive options document
+    - [ ] OPA Integration: Policy-based auto-approval vs manual approval
+    - [ ] Notification: Slack + Microsoft Teams webhooks
+    - [ ] TargetProcess Integration: Link approvals to tickets
+    - [ ] Monitoring: Audit trail to Datadog + Grafana dashboards
+    - [ ] RBAC: Role-based approvers with emergency bypass
+    - [ ] Cost Estimation: Calculate VM + trait costs for approval decision
 
-### **5.4 Migration from Terraform/Terragrunt** 🎯
+## Phase 6: Demo 07 - Approval Workflows (Governance)
+**Goal**: Multi-stage approval for infrastructure changes with policy validation
+
+**Location**: `helm/demos/demo-infra-vm-07-workflows/`
+
+**Tech Stack**:
+- **Workflow Engine**: KubeVela Workflow (suspend steps)
+- **Policy Validation**: OPA (Open Policy Agent) for auto-approval decisions
+- **Notifications**: Slack + Microsoft Teams webhooks
+- **Ticketing**: TargetProcess integration
+- **Monitoring**: Datadog + Grafana (Prometheus stack) for audit trail
+- **RBAC**: Kubernetes RBAC for role-based approvers
+
+**Key Design Questions** (see Demo 07 README for details):
+1. **Approver Management**: How to define who can approve? (ConfigMap vs LDAP vs external service)
+2. **Notification Method**: How to notify approvers? (Slack, Teams, Email, multi-channel)
+3. **Multi-Stage Logic**: Sequential vs parallel approvals? (team lead → finance vs both together)
+4. **OPA Integration**: When to auto-approve? (compliant small VMs vs all need approval)
+5. **Emergency Bypass**: Break-glass mechanism for outages? (Who has permission, how to audit)
+6. **TargetProcess Integration**: Link to existing tickets? (Mandatory vs optional)
+7. **Cost Estimation**: Show VM + trait costs? (Accuracy requirements for approval decision)
+
+**Implementation Phases**:
+- [ ] **6.1 Design Review**: Finalize tech stack and architectural decisions
+- [ ] **6.2 Simple Approval**: Single suspend step with manual resume
+- [ ] **6.3 Slack/Teams Notifications**: Webhook integration with approval buttons
+- [ ] **6.4 OPA Policy Engine**: Auto-approve compliant requests, block violations
+- [ ] **6.5 Multi-Stage Approvals**: Sequential chains (team lead → finance → security)
+- [ ] **6.6 Cost Estimation**: Calculate monthly VM + trait costs
+- [ ] **6.7 TargetProcess Integration**: Link approvals to tickets
+- [ ] **6.8 Audit Trail**: Export events to Datadog, create Grafana dashboards
+- [ ] **6.9 Emergency Bypass**: Break-glass role with mandatory audit
+- [ ] **6.10 Documentation**: Complete Demo 07 with examples and screenshots
+
+## Phase 7: Demo 08 - Importing Existing VMs (Brownfield)
+**Goal**: Adopt existing Azure VMs into KubeVela management without recreation
+
+**Location**: `helm/demos/demo-infra-vm-08-import/`
+
+**Substeps** (progressive complexity):
+- [ ] **7.1 Basic Import (08.1)**: Single VM with `asoctl import`
+- [ ] **7.2 Dependencies (08.2)**: Import VM + NICs + Disks + NSGs
+- [ ] **7.3 KubeVela Wrap (08.3)**: Convert raw ASO2 to KubeVela Application
+- [ ] **7.4 Apply Traits (08.4)**: Add backup/monitoring/security to imported VMs
+- [ ] **7.5 Bulk Import (08.5)**: Script to import 100+ VMs automatically
+- [ ] **7.6 Terraform Migration (08.6)**: Import Terraform-managed VMs, remove from tfstate
+- [ ] **7.7 Drift Detection (08.7)**: Compare imported config vs Azure reality
+- [ ] **7.8 Templates (08.8)**: Reusable import playbook for production
+
+**Priority**: Phase 1 (08.1-08.3) for immediate brownfield needs
+
+## Phase 8: Migration from Terraform/Terragrunt 🎯
 - **Goal**: Replace infrastructure pipelines with KubeVela + ASO2
 - **Benefits**:
   - Declarative state in Kubernetes
@@ -193,10 +260,10 @@
   - GitOps-compatible (optional)
 - **Challenges**:
   - Existing Terragrunt projects need mapping to ComponentDefinitions
-  - State migration strategy
+  - State migration strategy (use Demo 08 patterns)
   - Team training on CUE/KubeVela
 
-## Phase 6: KRO Comparison (Optional)
-- [ ] **6.1 KRO Setup**: Install KRO.
-- [ ] **6.2 ResourceGroup Definition**: Define `AKSCluster` API in KRO.
-- [ ] **6.3 Comparison**: Document pros/cons vs KubeVela.
+## Phase 9: KRO Comparison (Optional)
+- [ ] **9.1 KRO Setup**: Install KRO.
+- [ ] **9.2 ResourceGroup Definition**: Define `AKSCluster` API in KRO.
+- [ ] **9.3 Comparison**: Document pros/cons vs KubeVela.

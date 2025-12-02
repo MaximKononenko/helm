@@ -384,7 +384,7 @@ Your UI can present traits as checkboxes:
 │ Create Virtual Machine              │
 ├─────────────────────────────────────┤
 │ Name: [vm-user-123            ]     │
-│ Size: [Standard_B2s ▼]              │
+│ Size: [small ▼]                     │
 │                                     │
 │ Data Disks:                         │
 │ ☑ Add data disk 1                   │

@@ -375,29 +375,31 @@ if parameter.publicIP.enabled {
 
 ## Demo Comparison Matrix
 
-| Feature | Demo 1<br/>App + Timoni | Demo 2<br/>Infra + Timoni | Demo 3<br/>Infra + KubeVela + Timoni | Demo 4<br/>Infra + KubeVela Native | Demo 5<br/>REST API Integration | Demo 6<br/>Traits (Policies) | Demo 7<br/>Import Existing |
-|---------|-------------------------|---------------------------|--------------------------------------|-----------------------------------|----------------------------------|------------------------------|----------------------------|
-| **Use Case** | Application deployment | Infrastructure testing | Orchestrated infra | Self-service platform | UI/API integration | Composable policies | Brownfield migration |
-| **Tool** | Timoni | Timoni | KubeVela + Timoni | KubeVela | Kubernetes REST API | KubeVela Traits | asoctl + ASO2 |
-| **Execution** | CLI/ArgoCD | CLI | Job wrapper | Controller | HTTP/REST | Controller | CLI → Adoption |
-| **Bundles** | ✅ bundle.cue | ✅ bundle.cue | ❌ N/A | ❌ N/A | ❌ N/A | ❌ N/A | ❌ N/A |
-| **Create** | ✅ | ✅ | ✅ | ✅ | ✅ POST | ✅ | ✅ Adopt (no recreation) |
-| **Update** | ✅ | ✅ | ⚠️ Manual | ✅ | ⚠️ PATCH (needs complete payload) | ✅ | ✅ After adoption |
-| **Delete** | ✅ | ✅ | ⚠️ Manual | ✅ | ✅ DELETE | ✅ | ⚠️ Optional (detach-on-delete) |
-| **OAM Abstraction** | ❌ | ❌ | ⚠️ Limited | ✅ | ✅ (via Application CRD) | ✅ | ✅ (after conversion) |
-| **Policy Enforcement** | ⚠️ Module-level | ⚠️ Module-level | ⚠️ Module-level | ✅ CUE validation | ✅ CUE validation + RBAC | ✅ Trait-based | ✅ Can add traits |
-| **API Integration** | ❌ CLI only | ❌ CLI only | ⚠️ Job-based | ✅ REST API | ✅ Pure REST API | ✅ REST API | ⚠️ CLI then REST |
-| **Authentication** | N/A | N/A | N/A | N/A | ✅ Bearer Token | ✅ Bearer Token | ✅ Azure auth |
-| **RBAC** | N/A | N/A | N/A | ⚠️ Admin-level | ✅ ServiceAccount-based | ✅ ServiceAccount-based | ✅ ASO credentials |
-| **Traits Support** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ Primary Feature | ✅ After adoption |
-| **Tag Composition** | ⚠️ Hardcoded | ⚠️ Hardcoded | ⚠️ Hardcoded | ✅ User + Platform | ✅ User + Platform | ✅ User + Platform + Traits | ✅ Preserves existing |
-| **Separation of Concerns** | ❌ | ❌ | ❌ | ⚠️ Limited | ⚠️ Limited | ✅ Full | ✅ Full (after conversion) |
-| **Policy Composability** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Mix & Match | ✅ Mix & Match |
-| **UI-Ready** | ❌ | ❌ | ❌ | ⚠️ kubectl proxy | ✅ Direct HTTPS | ✅ Direct HTTPS | ⚠️ Backend script |
-| **Downtime Risk** | N/A | N/A | N/A | N/A | N/A | N/A | ✅ Zero downtime |
-| **Terraform Migration** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Primary use case |
-| **Complexity** | Low | Low | High | Medium | Medium | Medium | Low (automated) |
-| **Best For** | Developers | Testing | ❌ Not recommended | Platform engineering | UI/Frontend integration | Enterprise governance | Migration & Adoption |
+| Feature | Demo 1<br/>App + Timoni | Demo 2<br/>Infra + Timoni | Demo 3<br/>Infra + KubeVela + Timoni | Demo 4<br/>Infra + KubeVela Native | Demo 5<br/>REST API Integration | Demo 6<br/>Traits (Policies) | Demo 7<br/>Workflows | Demo 08<br/>Import |
+|---------|-------------------------|---------------------------|--------------------------------------|-----------------------------------|----------------------------------|------------------------------|----------------------|---------------------|
+| **Use Case** | Application deployment | Infrastructure testing | Orchestrated infra | Self-service platform | UI/API integration | Composable policies | Approval workflows | Brownfield migration |
+| **Tool** | Timoni | Timoni | KubeVela + Timoni | KubeVela | Kubernetes REST API | KubeVela Traits | KubeVela Workflow | asoctl + ASO2 |
+| **Execution** | CLI/ArgoCD | CLI | Job wrapper | Controller | HTTP/REST | Controller | Workflow Engine | CLI → Adoption |
+| **Bundles** | ✅ bundle.cue | ✅ bundle.cue | ❌ N/A | ❌ N/A | ❌ N/A | ❌ N/A | ❌ N/A | ❌ N/A |
+| **Create** | ✅ | ✅ | ✅ | ✅ | ✅ POST | ✅ | ⚠️ After approval | ✅ Adopt (no recreation) |
+| **Update** | ✅ | ✅ | ⚠️ Manual | ✅ | ⚠️ PATCH (needs complete payload) | ✅ | ⚠️ After approval | ✅ After adoption |
+| **Delete** | ✅ | ✅ | ⚠️ Manual | ✅ | ✅ DELETE | ✅ | ⚠️ After approval | ⚠️ Optional (detach-on-delete) |
+| **OAM Abstraction** | ❌ | ❌ | ⚠️ Limited | ✅ | ✅ (via Application CRD) | ✅ | ✅ | ✅ (after conversion) |
+| **Policy Enforcement** | ⚠️ Module-level | ⚠️ Module-level | ⚠️ Module-level | ✅ CUE validation | ✅ CUE validation + RBAC | ✅ Trait-based | ✅ Approval gates | ✅ Can add traits |
+| **API Integration** | ❌ CLI only | ❌ CLI only | ⚠️ Job-based | ✅ REST API | ✅ Pure REST API | ✅ REST API | ✅ REST API | ⚠️ CLI then REST |
+| **Authentication** | N/A | N/A | N/A | N/A | ✅ Bearer Token | ✅ Bearer Token | ✅ Bearer Token | ✅ Azure auth |
+| **RBAC** | N/A | N/A | N/A | ⚠️ Admin-level | ✅ ServiceAccount-based | ✅ ServiceAccount-based | ✅ Role-based approvers | ✅ ASO credentials |
+| **Traits Support** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ Primary Feature | ✅ | ✅ After adoption |
+| **Tag Composition** | ⚠️ Hardcoded | ⚠️ Hardcoded | ⚠️ Hardcoded | ✅ User + Platform | ✅ User + Platform | ✅ User + Platform + Traits | ✅ User + Platform + Traits | ✅ Preserves existing |
+| **Separation of Concerns** | ❌ | ❌ | ❌ | ⚠️ Limited | ⚠️ Limited | ✅ Full | ✅ Full | ✅ Full (after conversion) |
+| **Policy Composability** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Mix & Match | ✅ Mix & Match | ✅ Mix & Match |
+| **UI-Ready** | ❌ | ❌ | ❌ | ⚠️ kubectl proxy | ✅ Direct HTTPS | ✅ Direct HTTPS | ✅ Direct HTTPS | ⚠️ Backend script |
+| **Approval Required** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Primary Feature | ❌ |
+| **Notification** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Email/Teams/Slack | ❌ |
+| **Downtime Risk** | N/A | N/A | N/A | N/A | N/A | N/A | N/A | ✅ Zero downtime |
+| **Terraform Migration** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Primary use case |
+| **Complexity** | Low | Low | High | Medium | Medium | Medium | High | Low (automated) |
+| **Best For** | Developers | Testing | ❌ Not recommended | Platform engineering | UI/Frontend integration | Enterprise governance | Regulated environments | Migration & Adoption |
 
 ---
 
@@ -1029,11 +1031,61 @@ az resource list --tag ComplianceFramework=sox -o table
 
 ---
 
-## Demo 7: Importing Existing VMs (Brownfield Migration)
+## Demo 7: Approval Workflows
+
+**Use Case**: 🎯 **GOVERNANCE** - Multi-stage approval for infrastructure changes
+
+**Location**: `helm/demos/demo-infra-vm-07-workflows/`
+
+**Documentation**: See [Demo 07 README](demos/demo-infra-vm-07-workflows/README.md) for detailed discussion on:
+- Approver management strategies (ConfigMap vs LDAP vs external service)
+- Notification integrations (Slack, Microsoft Teams, Email)
+- Multi-stage approval logic (sequential vs parallel)
+- Policy validation with OPA
+- Integration with TargetProcess ticketing system
+- Monitoring and audit with Datadog + Grafana
+
+### Architecture
+```
+User Request → Validation → Approval Workflow → Provisioning
+                    ↓              ↓
+            OPA Policy Check   Approver Notification
+                    ↓          (Slack/Teams)
+              Auto/Manual          ↓
+               Approval      Approve/Reject Decision
+                    ↓              ↓
+            Provision or Cancel (Audit to Datadog)
+```
+
+### Key Features
+- **Multi-stage approvals**: Sequential approval chains (team lead → finance → security)
+- **Conditional workflows**: Approval requirements based on resource cost/type
+- **Notification integration**: Slack and Microsoft Teams webhooks
+- **OPA policy validation**: Auto-approve compliant requests, block violations
+- **Audit trail**: Complete approval history to Datadog + Grafana dashboards
+- **Timeout handling**: Auto-reject or escalate after timeout
+- **TargetProcess integration**: Link approvals to tickets
+- **Self-service with governance**: Users request, approvers control
+
+**Status**: 🔜 Design phase - Review README for discussion topics
+
+---
+
+## Demo 08: Importing Existing VMs (Brownfield Migration)
 
 **Use Case**: 🎯 **ADOPT WITHOUT RECREATION** - Import existing VMs into KubeVela management
 
-**Location**: `helm/demos/demo-infra-vm-07-import/`
+**Location**: `helm/demos/demo-infra-vm-08-import/`
+
+**Documentation**: See [Demo 08 README](demos/demo-infra-vm-08-import/README.md) for substeps:
+- **08.1**: Basic single VM import with `asoctl`
+- **08.2**: Import with dependencies (NICs, Disks, NSGs)
+- **08.3**: Wrap in KubeVela Application
+- **08.4**: Apply traits to imported VMs
+- **08.5**: Bulk import automation
+- **08.6**: Migration from Terraform
+- **08.7**: Configuration drift detection
+- **08.8**: Import templates and documentation
 
 ### Architecture
 ```
@@ -1294,16 +1346,21 @@ metadata:
 
 ## Next Steps
 
-1. ✅ **Demo 4 Testing Complete**: Full CUD lifecycle validated via REST API
-2. ✅ **Traits Demonstrated**: Backup, Cost, Security, Monitoring
-3. ✅ **Import Workflow**: Adopt existing VMs without recreation
-4. **Test Traits**: Apply TraitDefinitions and validate tag merging
-5. **Bulk Migration**: Import production Terraform-managed infrastructure
-6. **Create UI Mockups**: Show how users interact with the platform
-7. **Policy Enforcement**: Admission webhook to require traits
-8. **Enhanced RBAC**: Namespace-scoped roles for tenant isolation
-9. **Cost Estimation**: Pre-deployment cost calculation
-10. **Approval Workflow**: Multi-stage approvals for expensive resources
+1. ✅ **Demo 4 Complete**: Full CUD lifecycle validated via REST API
+2. ✅ **Demo 5 Complete**: REST API integration with ServiceAccount RBAC
+3. ✅ **Demo 6 Complete**: Traits validated (Backup, Cost, Security, Monitoring) + Data disks
+4. ✅ **Import Workflow**: ASO2 adoption without recreation documented (Demo XX)
+5. ✅ **ASO2 CRDs**: Organized under `helm/aso2/` with live management
+6. 🔜 **Demo 7 Focus**: Approval Workflows - Design and implementation
+   - Multi-stage approval chains
+   - Notification integration (Email/Teams/Slack)
+   - Role-based approvers
+   - Audit trail and compliance
+7. **Bulk Migration**: Import production Terraform-managed infrastructure
+8. **Create UI Mockups**: Show how users interact with the platform
+9. **Policy Enforcement**: Admission webhook to require traits
+10. **Enhanced RBAC**: Namespace-scoped roles for tenant isolation
+11. **Cost Estimation**: Pre-deployment cost calculation based on vmSize + traits
 
 ---
 
@@ -1332,10 +1389,25 @@ metadata:
   - `helm/vela/definitions/security-baseline-trait.yaml` (Security and compliance)
   - `helm/vela/definitions/monitoring-trait.yaml` (Alerting and metrics with Datadog/Prometheus)
 
-- **Import/Migration (Demo 7)**:
-  - `helm/demos/demo-infra-vm-07-import/import-existing-vm.sh` (Automated import script)
-  - `helm/demos/demo-infra-vm-07-import/convert-to-definition.sh` (Convert to ComponentDefinition)
-  - `helm/demos/demo-infra-vm-07-import/README.md` (Import documentation and use cases)
+- **Approval Workflows (Demo 7)**:
+  - `helm/demos/demo-infra-vm-07-workflows/README.md` (Design discussion and options)
+  - Workflow definitions with approval steps (TBD)
+  - Notification webhooks for Slack and Microsoft Teams (TBD)
+  - OPA policy validation (TBD)
+  - RBAC for approvers (TBD)
+  - Audit trail to Datadog + Grafana (TBD)
+  - TargetProcess integration (TBD)
+
+- **Import/Migration (Demo 08)**:
+  - `helm/demos/demo-infra-vm-08-import/README.md` (8 substeps from basic to advanced)
+  - `helm/demos/demo-infra-vm-08-import/import-existing-vm.sh` (Automated import script)
+  - `helm/demos/demo-infra-vm-08-import/convert-to-definition.sh` (Convert to ComponentDefinition)
+
+- **ASO2 CRDs**:
+  - `helm/aso2/azureserviceoperator_customresourcedefinitions_v2.16.0.yaml` (Complete CRD bundle)
+  - `helm/aso2/live/vm-crds.yaml` (VirtualMachine, NetworkInterface)
+  - `helm/aso2/live/aks-crds.yaml` (ManagedCluster and related resources)
+  - `helm/aso2/live/disk-crd.yaml` (Disk for data disk management)
 
 - **Automation**:
   - `helm/demos/demo-infra-vm-05-api/test-api.sh` (Full REST API test script)

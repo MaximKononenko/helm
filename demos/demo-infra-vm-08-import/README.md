@@ -1,6 +1,10 @@
-# Demo 7: Importing Existing VMs
+# Demo 08: Importing Existing VMs (Brownfield Migration)
 
 This demo shows how to import existing Azure VMs into KubeVela + ASO management without recreation.
+
+## Overview
+
+Importing (or "adopting") existing infrastructure is a critical capability for brownfield environments. This demo covers multiple scenarios and approaches, broken down into progressive substeps.
 
 ## Prerequisites
 
@@ -232,8 +236,52 @@ az vm show --resource-group rg-existing --name existing-vm-01 --query tags
 | **GitOps Ready** | Requires state backend setup | Native Kubernetes resources |
 | **Drift Detection** | `terraform plan` | ASO reconciliation loop |
 
-## Next Steps
+## Next Steps (Substeps for Demo 08)
 
-- **Demo 8**: Migrating from Terraform to KubeVela
-- **Demo 9**: Bulk import of existing infrastructure
-- **Demo 10**: Configuration drift detection and reconciliation
+This demo can be expanded into multiple progressive substeps:
+
+### 08.1: Basic Single VM Import
+- **Goal**: Import one existing VM using `asoctl`
+- **Skills**: Basic adoption, reconcile-policy annotation
+- **Deliverable**: Single VM managed by ASO without recreation
+
+### 08.2: Import with Dependencies
+- **Goal**: Import VM with all related resources (NICs, Disks, NSGs)
+- **Skills**: Dependency discovery, resource graph import
+- **Deliverable**: Complete VM infrastructure stack imported
+
+### 08.3: Wrap in KubeVela Application
+- **Goal**: Convert raw ASO resources to KubeVela Application
+- **Skills**: `type: raw` components, Application composition
+- **Deliverable**: Imported VM managed via KubeVela GitOps
+
+### 08.4: Apply Traits to Imported VMs
+- **Goal**: Add backup, monitoring, security traits to existing VMs
+- **Skills**: Trait composition, ConfigMap generation
+- **Deliverable**: Imported VM with full trait stack (no recreation)
+
+### 08.5: Bulk Import Automation
+- **Goal**: Import entire resource groups or subscriptions
+- **Skills**: Scripting with `az` + `asoctl`, batch processing
+- **Deliverable**: Script to import 100+ VMs automatically
+
+### 08.6: Migration from Terraform
+- **Goal**: Import Terraform-managed VMs and remove from tfstate
+- **Skills**: Terraform state manipulation, KubeVela migration
+- **Deliverable**: Complete Terraform → KubeVela migration path
+
+### 08.7: Configuration Drift Detection
+- **Goal**: Compare imported config vs Azure reality, detect drift
+- **Skills**: ASO reconciliation, compliance scanning
+- **Deliverable**: Drift detection dashboard + auto-remediation
+
+### 08.8: Import Templates and Documentation
+- **Goal**: Create reusable import templates for common scenarios
+- **Skills**: Templating, documentation as code
+- **Deliverable**: Import playbook for production use
+
+## Implementation Priority
+
+**Phase 1 (Immediate)**: 08.1, 08.2, 08.3
+**Phase 2 (Short-term)**: 08.4, 08.5
+**Phase 3 (Long-term)**: 08.6, 08.7, 08.8
