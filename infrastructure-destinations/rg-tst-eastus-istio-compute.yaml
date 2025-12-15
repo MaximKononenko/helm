@@ -1,0 +1,37 @@
+apiVersion: ops-box.io/v1
+kind: InfrastructureDestination
+metadata:
+  name: rg-tst-eastus-istio-compute
+  labels:
+    ops-box.io/organization: catalinamarketing
+    ops-box.io/environment: dev
+    ops-box.io/region: eastus
+spec:
+  organization: catalinamarketing
+  adoProject: CMP
+  environment: dev
+  region: eastus
+  displayName: rg-tst-eastus-istio-compute
+  description: rg-tst-eastus-istio-compute
+  azure:
+    subscriptionId: a50f971b-376d-4d05-ac33-1e9fcfb8f32c
+    resourceGroup: rg-tst-eastus-istio-compute
+    tenantId: 12345678-1234-1234-1234-123456789012
+  networking:
+    vnetName: vn-np-eastus-10-166-54-0-24
+    subnetName: sn-tst-eastus-istio-10-166-54-0-26-aks-b
+    vnetResourceGroup: rg-np-eastus-dashboard
+  quotas:
+    maxAKSClusters: 2
+    maxKeyVaults: 1
+    maxManagedIdentities: 20
+    maxStorageAccounts: 5
+    maxTotalResources: 13
+    maxVMs: 10
+  allowedResources:
+    aksClusters: false
+    keyVaults: true
+    managedIdentities: true
+    storageAccounts: true
+    virtualMachines: true
+  targetCluster: null
