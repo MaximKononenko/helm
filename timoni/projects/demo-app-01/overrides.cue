@@ -4,7 +4,7 @@ bundle: {
 	instances: {
 		"demo-app-01-frontend": {
 			values: {
-				replicas: 2
+				replicas: 1
 			}
 		}
 	}

@@ -13,7 +13,7 @@ spec:
         resourceGroup: "rg-tst-eastus-istio-compute"
         vmName: "vm-kubevela-native-01"
         # User-friendly size (maps to Azure SKU in ComponentDefinition)
-        vmSize: "medium"
+        vmSize: "small"
         # Environment affects actual SKU selection
         environment: "dev"
         # Network (required - brownfield)
