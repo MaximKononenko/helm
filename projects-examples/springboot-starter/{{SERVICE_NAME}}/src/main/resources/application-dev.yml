@@ -1,0 +1,15 @@
+# ============================================
+# {{PROJECT_NAME}} Development Configuration
+# ============================================
+
+logging:
+  level:
+    root: DEBUG
+    ? {? {GROUP_ID: ''} : ''}
+    : DEBUG
+# Enable additional actuator endpoints in dev
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'

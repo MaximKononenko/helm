@@ -1,0 +1,40 @@
+# {{PROJECT_NAME}} - Python Project Configuration
+
+[project]
+name = "{{PROJECT_NAME}}"
+version = "1.0.0"
+description = "{{DESCRIPTION}}"
+authors = [{name = "{{OWNER}}"}]
+readme = "README.md"
+requires-python = ">={{PYTHON_VERSION}}"
+license = {text = "MIT"}
+
+[tool.ruff]
+line-length = 100
+target-version = "py{{PYTHON_VERSION}}"
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "C4",   # flake8-comprehensions
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+python_version = "{{PYTHON_VERSION}}"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false

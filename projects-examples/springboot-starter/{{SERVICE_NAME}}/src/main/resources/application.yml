@@ -1,0 +1,41 @@
+# ============================================
+# {{PROJECT_NAME}} Configuration
+# ============================================
+
+spring:
+  application:
+    name: {? {PROJECT_NAME: ''} : ''}
+server:
+  port: {? {PORT: ''} : ''}
+  shutdown: graceful
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+# Application info
+info:
+  app:
+    name: {? {PROJECT_NAME: ''} : ''}
+    description: {? {DESCRIPTION: ''} : ''}
+    version: '@project.version@'
+    owner: {? {OWNER: ''} : ''}
+# Logging
+logging:
+  level:
+    root: INFO
+    ? {? {GROUP_ID: ''} : ''}
+    : INFO
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
