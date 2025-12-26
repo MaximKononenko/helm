@@ -37,6 +37,7 @@ stages:
         steps:
           - task: Bash@3
             displayName: Set Build Variables
+            name: buildVars
             inputs:
               targetType: inline
               script: |-
@@ -50,7 +51,7 @@ stages:
                 echo "##vso[task.setvariable variable=dockerFile;isOutput=false]$dockerFile"
 
                 buildTag="$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
-                echo "##vso[task.setvariable variable=buildTag;isOutput=false]$buildTag"
+                echo "##vso[task.setvariable variable=buildTag;isOutput=true]$buildTag"
 
                 imageTag="$(containerRegistryFullName)/$(projectName)/$(serviceName):$buildTag"
                 echo "##vso[task.setvariable variable=imageTag;isOutput=false]$imageTag"
@@ -91,7 +92,7 @@ stages:
     dependsOn: Build
     condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/release-'))
     variables:
-      buildTag: $[ stageDependencies.Build.kaniko_build.outputs['kanikoOutput.buildTag'] ]
+      buildTag: $[ stageDependencies.Build.kaniko_build.outputs['buildVars.buildTag'] ]
     jobs:
       - job: deploy
         displayName: Deploy to Kubernetes
@@ -159,6 +160,11 @@ stages:
 
                 echo "Deploying $(projectName) to $(ENVIRONMENT) environment"
                 echo "Image tag: $(IMAGE_TAG)"
+
+                # Login to ACR for Timoni to pull OCI module
+                timoni registry login $(containerRegistryFullName) \
+                  --username $(global.acrUsername) \
+                  --password $(global.acrPasswd)
 
                 # Create runtime values file
                 cat > runtime.yaml << EOF
