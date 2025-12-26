@@ -160,11 +160,19 @@ stages:
                 echo "Deploying $(projectName) to $(ENVIRONMENT) environment"
                 echo "Image tag: $(IMAGE_TAG)"
 
-                # Apply Timoni bundle with runtime values
+                # Create runtime values file
+                cat > runtime.yaml << EOF
+                runtime:
+                  name: "$(ENVIRONMENT)"
+                global:
+                  image:
+                    tag: "$(IMAGE_TAG)"
+                EOF
+
+                # Apply Timoni bundle
                 timoni bundle apply \
                   -f timoni-bundle.cue \
-                  -f timoni-values-$(ENVIRONMENT).yaml \
-                  --runtime-values IMAGE_TAG=$(IMAGE_TAG) \
+                  -f runtime.yaml \
                   --kube-context $(K8S_CONTEXT)
 
                 echo "Deployment completed successfully"
