@@ -160,11 +160,12 @@ stages:
                 echo "Deploying $(projectName) to $(ENVIRONMENT) environment"
                 echo "Image tag: $(IMAGE_TAG)"
 
-                # Apply Timoni bundle (namespace will be created automatically)
-                ENVIRONMENT=$(ENVIRONMENT) IMAGE_TAG=$(IMAGE_TAG) timoni bundle apply \
+                # Apply Timoni bundle with runtime values
+                timoni bundle apply \
                   -f timoni-bundle.cue \
                   -f timoni-values-$(ENVIRONMENT).yaml \
-                  --runtime-from-env
+                  --runtime timoni.context.environment=$(ENVIRONMENT) \
+                  --runtime IMAGE_TAG=$(IMAGE_TAG)
 
                 echo "Deployment completed successfully"
           - task: Bash@3

@@ -10,11 +10,11 @@ bundle: {
         url:     "oci://catalina.azurecr.io/classic-deployment"
         version: "0.2.3"
       }
-      namespace: "{{PROJECT_NAME}}-${ENVIRONMENT}"
+      namespace: "{{PROJECT_NAME}}-\(timoni.context.environment)"
       values: {
         image: {
           repository: "catalina.azurecr.io/{{PROJECT_NAME}}/{{SERVICE_NAME}}"
-          tag:        "${IMAGE_TAG}"
+          tag:        string @timoni(runtime:string:IMAGE_TAG)
           digest:     ""
           pullPolicy: "IfNotPresent"
         }
@@ -34,7 +34,7 @@ bundle: {
           }
         }
         env: {
-          ENVIRONMENT: "${ENVIRONMENT}"
+          ENVIRONMENT: timoni.context.environment
           LOG_LEVEL:   "INFO"
         }
         resources: {
@@ -54,7 +54,7 @@ bundle: {
           }
           hosts: [
             {
-              host: "{{PROJECT_NAME}}-${ENVIRONMENT}.catmktg.com"
+              host: "{{PROJECT_NAME}}-\(timoni.context.environment).catmktg.com"
               paths: [
                 {
                   path:     "/"
