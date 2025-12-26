@@ -98,6 +98,7 @@ stages:
         container:
           image: catalina.azurecr.io/ops-box/timoni-cd:latest
           endpoint: Catalina ACR
+          options: --user root
         steps:
           - checkout: self
           - task: Bash@3
@@ -105,6 +106,9 @@ stages:
             inputs:
               targetType: inline
               script: |-
+                # Set kubeconfig path
+                export KUBECONFIG=/root/.kube/config
+
                 # Determine environment based on branch/tag
                 if [[ "$(Build.SourceBranch)" == "refs/heads/main" ]]; then
                   ENVIRONMENT="dev"
@@ -147,6 +151,7 @@ stages:
             inputs:
               targetType: inline
               script: |-
+                export KUBECONFIG=/root/.kube/config
                 cd $(Build.SourcesDirectory)/.ci
 
                 echo "Switching to k8s context: $(K8S_CONTEXT)"
@@ -167,6 +172,8 @@ stages:
             inputs:
               targetType: inline
               script: |-
+                export KUBECONFIG=/root/.kube/config
+
                 echo "Waiting for deployment to be ready..."
                 kubectl wait --for=condition=available \
                   --timeout=300s \
