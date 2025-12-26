@@ -107,7 +107,7 @@ stages:
               targetType: inline
               script: |-
                 # Set kubeconfig path
-                export KUBECONFIG=/root/.kube/config
+                export KUBECONFIG=/workspace/.kube/config
 
                 # Determine environment based on branch/tag
                 if [[ "$(Build.SourceBranch)" == "refs/heads/main" ]]; then
@@ -151,7 +151,7 @@ stages:
             inputs:
               targetType: inline
               script: |-
-                export KUBECONFIG=/root/.kube/config
+                export KUBECONFIG=/workspace/.kube/config
                 cd $(Build.SourcesDirectory)/.ci
 
                 echo "Switching to k8s context: $(K8S_CONTEXT)"
@@ -172,7 +172,7 @@ stages:
             inputs:
               targetType: inline
               script: |-
-                export KUBECONFIG=/root/.kube/config
+                export KUBECONFIG=/workspace/.kube/config
 
                 echo "Waiting for deployment to be ready..."
                 kubectl wait --for=condition=available \
