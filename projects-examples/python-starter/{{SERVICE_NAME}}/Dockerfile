@@ -38,7 +38,7 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
-COPY app/ ./app/
+COPY src/ ./src/
 
 # Create non-root user
 RUN useradd -m -u 1000 -s /bin/bash appuser && \
@@ -54,4 +54,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:{{PORT}}/health')" || exit 1
 
 # Run with uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "{{PORT}}"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "{{PORT}}"]
