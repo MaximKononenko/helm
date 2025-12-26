@@ -164,7 +164,7 @@ stages:
                 timoni bundle apply \
                   -f timoni-bundle.cue \
                   -f timoni-values-$(ENVIRONMENT).yaml \
-                  --runtime-values image.tag=$(IMAGE_TAG) \
+                  --runtime-values IMAGE_TAG=$(IMAGE_TAG) \
                   --kube-context $(K8S_CONTEXT)
 
                 echo "Deployment completed successfully"

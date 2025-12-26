@@ -14,7 +14,7 @@ bundle: {
       values: {
         image: {
           repository: "catalina.azurecr.io/{{PROJECT_NAME}}/{{SERVICE_NAME}}"
-          tag:        string | *"latest"
+          tag:        string @tag(image_tag,var=IMAGE_TAG)
           digest:     ""
           pullPolicy: "IfNotPresent"
         }
