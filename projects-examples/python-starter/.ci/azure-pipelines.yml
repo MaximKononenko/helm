@@ -25,9 +25,9 @@ variables:
   - name: containerRegistryFullName
     value: 'catalina.azurecr.io'
   - name: dockerFile
-    value: '{{SERVICE_NAME}}/Dockerfile'
+    value: 'Dockerfile'
   - name: context
-    value: '.'
+    value: '{{SERVICE_NAME}}'
 stages:
   - stage: Build
     displayName: CI
