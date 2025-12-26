@@ -85,3 +85,93 @@ stages:
                   --context=$(context) \
                   --dockerfile=$(dockerFile) \
                   --destination=$(imageTag)
+            name: kanikoOutput
+  - stage: Deploy
+    displayName: CD
+    dependsOn: Build
+    condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/release-'))
+    variables:
+      buildTag: $[ stageDependencies.Build.kaniko_build.outputs['kanikoOutput.buildTag'] ]
+    jobs:
+      - job: deploy
+        displayName: Deploy to Kubernetes
+        container:
+          image: catalina.azurecr.io/ops-box/timoni-cd:latest
+          endpoint: Catalina ACR
+        steps:
+          - checkout: self
+          - task: Bash@3
+            displayName: Determine Environment and Context
+            inputs:
+              targetType: inline
+              script: |-
+                # Determine environment based on branch/tag
+                if [[ "$(Build.SourceBranch)" == "refs/heads/main" ]]; then
+                  ENVIRONMENT="dev"
+                  NAMESPACE_SUFFIX="dev"
+                elif [[ "$(Build.SourceBranch)" =~ ^refs/tags/release-.* ]]; then
+                  ENVIRONMENT="prd"
+                  NAMESPACE_SUFFIX="prd"
+                else
+                  echo "Unknown branch/tag pattern, skipping deployment"
+                  exit 1
+                fi
+
+                # Determine k8s context based on ADO project
+                ADO_PROJECT="$(System.TeamProject)"
+                if [[ "$ADO_PROJECT" == "CMP" ]]; then
+                  if [[ "$ENVIRONMENT" == "dev" ]]; then
+                    K8S_CONTEXT="aks-np-eastus-cmp-admin"
+                  else
+                    K8S_CONTEXT="aks-prd-eastus2-cmp-admin"
+                  fi
+                elif [[ "$ADO_PROJECT" == "Catalina_AI" ]]; then
+                  K8S_CONTEXT="aks-prd-eastus2-n8n-admin"
+                else
+                  echo "Unknown ADO project: $ADO_PROJECT"
+                  exit 1
+                fi
+
+                echo "=== Deployment Configuration ==="
+                echo "Environment: $ENVIRONMENT"
+                echo "Namespace: $(projectName)-$NAMESPACE_SUFFIX"
+                echo "K8s Context: $K8S_CONTEXT"
+                echo "Image Tag: $(buildTag)"
+
+                # Export as pipeline variables
+                echo "##vso[task.setvariable variable=ENVIRONMENT]$ENVIRONMENT"
+                echo "##vso[task.setvariable variable=K8S_CONTEXT]$K8S_CONTEXT"
+                echo "##vso[task.setvariable variable=IMAGE_TAG]$(buildTag)"
+          - task: Bash@3
+            displayName: Deploy with Timoni
+            inputs:
+              targetType: inline
+              script: |-
+                cd $(Build.SourcesDirectory)/.ci
+
+                echo "Switching to k8s context: $(K8S_CONTEXT)"
+                kubectl config use-context $(K8S_CONTEXT)
+
+                echo "Deploying $(projectName) to $(ENVIRONMENT) environment"
+                echo "Image tag: $(IMAGE_TAG)"
+
+                # Apply Timoni bundle (namespace will be created automatically)
+                ENVIRONMENT=$(ENVIRONMENT) IMAGE_TAG=$(IMAGE_TAG) timoni bundle apply \
+                  -f timoni-bundle.cue \
+                  -f timoni-values-$(ENVIRONMENT).yaml \
+                  --runtime-from-env
+
+                echo "Deployment completed successfully"
+          - task: Bash@3
+            displayName: Verify Deployment
+            inputs:
+              targetType: inline
+              script: |-
+                echo "Waiting for deployment to be ready..."
+                kubectl wait --for=condition=available \
+                  --timeout=300s \
+                  deployment/$(projectName)-$(serviceName) \
+                  -n $(projectName)-$(ENVIRONMENT)
+
+                echo "Deployment verification completed"
+                kubectl get pods -n $(projectName)-$(ENVIRONMENT) -l app=$(projectName)-$(serviceName)

@@ -1,0 +1,21 @@
+# Timoni values for {{PROJECT_NAME}} - Development environment
+
+bundle:
+  instances:
+    "{{PROJECT_NAME}}-{{SERVICE_NAME}}":
+      values:
+        replicas: 1
+        ingress:
+          enabled: {{INGRESS_ENABLED}}
+          hosts:
+            - host: {{PROJECT_NAME}}-dev.catmktg.com
+              paths:
+                - path: /
+                  pathType: Prefix
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"

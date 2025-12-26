@@ -1,0 +1,21 @@
+# Timoni values for {{PROJECT_NAME}} - Production environment
+
+bundle:
+  instances:
+    "{{PROJECT_NAME}}-{{SERVICE_NAME}}":
+      values:
+        replicas: 2
+        ingress:
+          enabled: {{INGRESS_ENABLED}}
+          hosts:
+            - host: {{PROJECT_NAME}}.catmktg.com
+              paths:
+                - path: /
+                  pathType: Prefix
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
