@@ -1,0 +1,125 @@
+apiVersion: ops-box.io/v1
+kind: AdoPipelineDefinition
+metadata:
+  name: app-01-pipeline
+  namespace: ops-box
+spec:
+  draft: false
+  templatesSource:
+    gitDefinitionName: demo-app-01-git
+    basePath: templates/
+  outputs:
+    pipeline:
+      gitDefinitionName: app-01-git
+      path: .ci/azure-pipelines.yml
+  pipelineDefinition:
+    name: $(Build.SourceBranchName).$(Build.BuildId)
+    pool: vmss-pr-eastus2-ado-cmp
+    trigger:
+      batch: true
+      branches:
+        include:
+          - main
+          - develop
+    variables:
+      - group: devops-credentials
+      - group: ACR Catalina
+      - name: serviceName
+        value: app-01
+      - name: projectName
+        value: app-01
+      - name: containerRegistry
+        value: 'Catalina ACR'
+      - name: containerRegistryFullName
+        value: 'catalina.azurecr.io'
+      - name: dockerFile
+        value: 'Dockerfile'
+      - name: context
+        value: '.'
+    stages:
+      - stage: Build
+        displayName: CI
+        jobs:
+          - baseTemplate: azure-pipelines/jobs/kaniko-python-build.yml
+      - stage: Deploy
+        displayName: CD
+        dependsOn: Build
+        condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/release-'))
+        variables:
+          buildTag: $[ stageDependencies.Build.kaniko_build.outputs['buildVars.buildTag'] ]
+        jobs:
+          - job: deploy
+            displayName: Deploy to Kubernetes
+            container:
+              image: catalina.azurecr.io/ops-box/timoni-cd:latest
+              endpoint: Catalina ACR
+              options: --user root
+            steps:
+              - checkout: self
+              - task: Bash@3
+                displayName: Determine Environment and Context
+                inputs:
+                  targetType: inline
+                  script: |-
+                    export KUBECONFIG=/workspace/.kube/config
+                    if [[ "$(Build.SourceBranch)" == "refs/heads/main" ]]; then
+                      ENVIRONMENT="dev"
+                      NAMESPACE_SUFFIX="dev"
+                    elif [[ "$(Build.SourceBranch)" =~ ^refs/tags/release-.* ]]; then
+                      ENVIRONMENT="prd"
+                      NAMESPACE_SUFFIX="prd"
+                    else
+                      echo "Unknown branch/tag pattern"
+                      exit 1
+                    fi
+                    ADO_PROJECT="$(System.TeamProject)"
+                    if [[ "$ADO_PROJECT" == "CMP" ]]; then
+                      if [[ "$ENVIRONMENT" == "dev" ]]; then
+                        K8S_CONTEXT="aks-np-eastus-cmp-admin"
+                      else
+                        K8S_CONTEXT="aks-prd-eastus2-cmp-admin"
+                      fi
+                    else
+                      K8S_CONTEXT="aks-prd-eastus2-n8n-admin"
+                    fi
+                    echo "##vso[task.setvariable variable=ENVIRONMENT]$ENVIRONMENT"
+                    echo "##vso[task.setvariable variable=K8S_CONTEXT]$K8S_CONTEXT"
+              - task: Bash@3
+                displayName: Deploy with Timoni
+                inputs:
+                  targetType: inline
+                  script: |-
+                    export KUBECONFIG=/workspace/.kube/config
+                    cd $(Build.SourcesDirectory)/.ci
+                    kubectl config use-context $(K8S_CONTEXT)
+                    timoni registry login $(containerRegistryFullName) --username $(global.acrUsername) --password $(global.acrPasswd)
+                    cat > runtime.yaml << EOF
+                    runtime:
+                      name: "$(ENVIRONMENT)"
+                    global:
+                      image:
+                        tag: "$(buildTag)"
+                    EOF
+                    timoni bundle apply -f timoni-bundle.cue -f runtime.yaml --kube-context $(K8S_CONTEXT)
+              - task: Bash@3
+                displayName: Verify Deployment
+                inputs:
+                  targetType: inline
+                  script: |-
+                    export KUBECONFIG=/workspace/.kube/config
+                    kubectl wait --for=condition=available --timeout=300s deployment/$(projectName)-$(serviceName) -n $(projectName)-$(ENVIRONMENT)
+                    kubectl get pods -n $(projectName)-$(ENVIRONMENT) -l app=$(projectName)-$(serviceName)
+  ciConfig:
+    enabled: true
+    buildStrategy: kaniko
+    containerRegistry: acrcompcmp.azurecr.io
+  cdConfig:
+    enabled: true
+    createSeparateStages: true
+    profiles:
+      - name: dev
+        environment: dev
+        cluster: aks-np-eastus-cmp-admin
+        namespace: app-01-dev
+        approvalRequired: false
+        isTemporary: false
