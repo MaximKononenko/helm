@@ -35,12 +35,13 @@ spec:
       - name: dockerFile
         value: 'Dockerfile'
       - name: context
-        value: '.'
+        value: 'app-01'
     stages:
       - stage: Build
         displayName: CI
         jobs:
-          - baseTemplate: azure-pipelines/jobs/kaniko-python-build.yml
+          - baseTemplate: templates/jobs/kaniko-python-build.yml
+            job: template
       - stage: Deploy
         displayName: CD
         dependsOn: Build

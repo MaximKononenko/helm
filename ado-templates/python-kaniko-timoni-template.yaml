@@ -1,0 +1,416 @@
+apiVersion: ops-box.io/v1
+kind: AdoPipelineDefinition
+metadata:
+  name: ado-pipeline-python-kaniko-timoni
+  namespace: ops-box
+  labels:
+    ops-box.io/template: "true"
+    ops-box.io/language: "python"
+    ops-box.io/build-tool: "kaniko"
+    ops-box.io/deploy-tool: "timoni"
+    ops-box.io/repo-type: "single-service"
+  annotations:
+    ops-box.io/display-name: "Python Microservice CI/CD (Kaniko + Timoni)"
+    ops-box.io/description: "CI/CD pipeline for single-service Python microservices with Kaniko builds and Timoni deployments"
+    ops-box.io/job-templates: |
+      {
+        "Build": {
+          "python": "templates/jobs/kaniko-python-build.yml"
+        }
+      }
+    ops-box.io/wizard-config: |
+      {
+        "steps": [
+          {"id": "project", "label": "Project Setup"},
+          {"id": "source", "label": "Source Configuration"},
+          {"id": "ci", "label": "Build Configuration"},
+          {"id": "cd", "label": "Deployment Configuration"},
+          {"id": "output", "label": "Output Configuration"}
+        ]
+      }
+    ops-box.io/placeholders: |
+      [
+        {
+          "name": "OB_PIPELINE_NAME",
+          "wizardStep": "project",
+          "displayName": "Pipeline Name",
+          "description": "Unique name for the pipeline (auto-filled from project name)",
+          "required": true,
+          "scope": "global",
+          "type": "string",
+          "crField": "metadata.name",
+          "autoResolve": true,
+          "resolveFrom": "application.spec.projectName",
+          "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+          "minLength": 3,
+          "maxLength": 63,
+          "placeholder": "my-app-pipeline",
+          "helpUrl": "https://docs.ops-box.io/pipelines/naming"
+        },
+        {
+          "name": "SOURCE_GIT_DEFINITION",
+          "wizardStep": "source",
+          "displayName": "Source Repository",
+          "description": "GitDefinition name for source code repository",
+          "required": true,
+          "scope": "global",
+          "type": "gitdefinition",
+          "gitPurpose": "source",
+          "crField": "spec.sourceRepository.gitDefinitionName",
+          "default": "app-01-git",
+          "hidden": true
+        },
+        {
+          "name": "TEMPLATES_GIT_DEFINITION",
+          "wizardStep": "ci",
+          "displayName": "Templates Repository",
+          "description": "GitDefinition name for pipeline templates",
+          "required": true,
+          "scope": "global",
+          "type": "gitdefinition",
+          "gitPurpose": "templates",
+          "default": "demo-app-01-git",
+          "hidden": true
+        },
+        {
+          "name": "OUTPUT_GIT_DEFINITION",
+          "wizardStep": "output",
+          "displayName": "Output Repository",
+          "description": "GitDefinition name for pipeline output",
+          "required": true,
+          "scope": "global",
+          "type": "gitdefinition",
+          "gitPurpose": "output",
+          "crField": "spec.outputs.pipeline.gitDefinitionName",
+          "default": "app-01-git",
+          "helpUrl": "https://docs.ops-box.io/gitdefinition/output"
+        },
+        {
+          "name": "ADO_AGENT_POOL",
+          "wizardStep": "ci",
+          "displayName": "ADO Agent Pool",
+          "description": "Azure DevOps agent pool name",
+          "required": true,
+          "scope": "global",
+          "type": "string",
+          "default": "Default",
+          "placeholder": "Default",
+          "helpUrl": "https://docs.ops-box.io/ado/agent-pools"
+        },
+        {
+          "name": "ACR_VARIABLE_GROUP",
+          "wizardStep": "ci",
+          "displayName": "ACR Variable Group",
+          "description": "Azure DevOps variable group for container registry credentials",
+          "required": true,
+          "scope": "global",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "system.acrVariableGroup",
+          "placeholder": "acr-credentials",
+          "helpUrl": "https://docs.ops-box.io/ado/variable-groups"
+        },
+        {
+          "name": "SERVICE_NAME",
+          "wizardStep": "ci",
+          "displayName": "Service Name",
+          "description": "Name of the service being built",
+          "required": true,
+          "scope": "global",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "gitdefinition.spec.purposes.source.services[0].name",
+          "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+          "minLength": 2,
+          "maxLength": 63,
+          "placeholder": "my-service",
+          "helpUrl": "https://docs.ops-box.io/services/naming"
+        },
+        {
+          "name": "OB_SERVICE_NAME",
+          "displayName": "Service Name (Per-Item)",
+          "description": "Service name resolved per service in monorepo",
+          "required": true,
+          "scope": "per-item",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "item.name",
+          "iterateOver": "gitdefinition.spec.purposes.source.services",
+          "hidden": true
+        },
+        {
+          "name": "OB_SERVICE_CONTEXT",
+          "displayName": "Service Context (Per-Item)",
+          "description": "Service source path resolved per service in monorepo",
+          "required": true,
+          "scope": "per-item",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "item.serviceSrcPath",
+          "iterateOver": "gitdefinition.spec.purposes.source.services",
+          "hidden": true
+        },
+        {
+          "name": "OB_SERVICE_DOCKERFILE",
+          "displayName": "Service Dockerfile (Per-Item)",
+          "description": "Dockerfile path resolved per service in monorepo",
+          "required": false,
+          "scope": "per-item",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "item.dockerfilePath",
+          "iterateOver": "gitdefinition.spec.purposes.source.services",
+          "default": "Dockerfile",
+          "hidden": true
+        },
+        {
+          "name": "OB_SERVICE_LANGUAGE",
+          "displayName": "Service Language (Per-Item)",
+          "description": "Programming language resolved per service in monorepo",
+          "required": true,
+          "scope": "per-item",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "item.language",
+          "iterateOver": "gitdefinition.spec.purposes.source.services",
+          "hidden": true
+        },
+        {
+          "name": "PROJECT_NAME",
+          "wizardStep": "project",
+          "displayName": "Project Name",
+          "description": "Project name for resource grouping",
+          "required": true,
+          "scope": "global",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "application.spec.projectName",
+          "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+          "minLength": 3,
+          "maxLength": 63,
+          "placeholder": "my-project",
+          "helpUrl": "https://docs.ops-box.io/projects/naming"
+        },
+        {
+          "name": "CONTAINER_REGISTRY",
+          "wizardStep": "ci",
+          "displayName": "Container Registry",
+          "description": "Container registry hostname (without .azurecr.io)",
+          "required": true,
+          "scope": "global",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "system.containerRegistry",
+          "pattern": "^[a-z0-9]+$",
+          "placeholder": "myregistry",
+          "helpUrl": "https://docs.ops-box.io/registry/configuration"
+        },
+        {
+          "name": "CONTAINER_REGISTRY_FULL_NAME",
+          "wizardStep": "ci",
+          "displayName": "Container Registry Full Name",
+          "description": "Full container registry URL",
+          "required": true,
+          "scope": "global",
+          "type": "string",
+          "format": "url",
+          "autoResolve": true,
+          "resolveFrom": "system.containerRegistryFullName",
+          "pattern": "^[a-z0-9]+\\.azurecr\\.io$",
+          "placeholder": "myregistry.azurecr.io",
+          "hidden": true
+        },
+        {
+          "name": "SERVICE_CONTEXT",
+          "wizardStep": "ci",
+          "displayName": "Service Context",
+          "description": "Path to service source code relative to repository root",
+          "required": true,
+          "scope": "global",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "gitdefinition.spec.purposes.source.services[0].serviceSrcPath",
+          "default": ".",
+          "pattern": "^[a-zA-Z0-9/_.-]*$",
+          "placeholder": ".",
+          "helpUrl": "https://docs.ops-box.io/services/context"
+        },
+        {
+          "name": "DEPLOY_CONTAINER_IMAGE",
+          "wizardStep": "cd",
+          "displayName": "Deploy Container Image",
+          "description": "Container image for deployment tasks (with kubectl, timoni, etc.)",
+          "required": true,
+          "scope": "global",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "system.deployContainerImage",
+          "default": "devops-tools:latest",
+          "placeholder": "devops-tools:latest",
+          "hidden": true
+        },
+        {
+          "name": "ADO_PROJECT",
+          "wizardStep": "project",
+          "displayName": "ADO Project",
+          "description": "Azure DevOps project name",
+          "required": true,
+          "scope": "global",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "application.spec.adoProject",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-_ ]*$",
+          "minLength": 1,
+          "maxLength": 64,
+          "placeholder": "MyProject",
+          "helpUrl": "https://docs.ops-box.io/ado/projects"
+        },
+        {
+          "name": "CLUSTER_DEV",
+          "wizardStep": "cd",
+          "displayName": "Development Cluster",
+          "description": "Kubernetes cluster for dev environment",
+          "required": true,
+          "scope": "global",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "remotecluster.labels[ops-box.io/environment=dev]",
+          "placeholder": "aks-dev-cluster",
+          "helpUrl": "https://docs.ops-box.io/clusters/configuration"
+        },
+        {
+          "name": "CLUSTER_PROD",
+          "wizardStep": "cd",
+          "displayName": "Production Cluster",
+          "description": "Kubernetes cluster for prod environment",
+          "required": true,
+          "scope": "global",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "remotecluster.labels[ops-box.io/environment=prod]",
+          "placeholder": "aks-prod-cluster",
+          "helpUrl": "https://docs.ops-box.io/clusters/configuration"
+        },
+        {
+          "name": "CLUSTER_DEFAULT",
+          "wizardStep": "cd",
+          "displayName": "Default Cluster",
+          "description": "Fallback cluster if project-specific cluster not found",
+          "required": false,
+          "scope": "global",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "system.defaultCluster",
+          "default": "aks-default-cluster",
+          "hidden": true
+        }
+      ]
+spec:
+  draft: true
+  sourceRepository:
+    gitDefinitionName: "{{SOURCE_GIT_DEFINITION}}"
+  templatesSource:
+    gitDefinitionName: "{{TEMPLATES_GIT_DEFINITION}}"
+    basePath: templates/
+  outputs:
+    pipeline:
+      gitDefinitionName: "{{OUTPUT_GIT_DEFINITION}}"
+      path: .ci/azure-pipelines.yml
+  placeholderMappings:
+    # Populated by AdoApplicationMapper
+    # Format: {"{{PLACEHOLDER_NAME}}": "resolved-value"}
+    # For per-item placeholders: {"job-id.{{OB_SERVICE_NAME}}": "service-name"}
+    global: {}
+    perItem: {}
+  pipelineDefinition:
+    name: $(Build.SourceBranchName).$(Build.BuildId)
+    pool: "{{ADO_AGENT_POOL}}"
+    trigger:
+      batch: true
+      branches:
+        include:
+          - main
+          - develop
+    variables:
+      - group: devops-credentials
+      - group: "{{ACR_VARIABLE_GROUP}}"
+      - name: projectName
+        value: "{{PROJECT_NAME}}"
+      - name: containerRegistry
+        value: "{{CONTAINER_REGISTRY}}"
+      - name: containerRegistryFullName
+        value: "{{CONTAINER_REGISTRY_FULL_NAME}}"
+    stages:
+      - stage: Build
+        displayName: CI
+        jobs:
+          - baseTemplate: templates/jobs/kaniko-python-build.yml
+            job: template
+      - stage: Deploy
+        displayName: CD
+        dependsOn: Build
+        condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/release-'))
+        variables:
+          buildTag: $[ stageDependencies.Build.kaniko_build.outputs['buildVars.buildTag'] ]
+        jobs:
+          - job: deploy
+            displayName: Deploy to Kubernetes
+            container:
+              image: "{{DEPLOY_CONTAINER_IMAGE}}"
+              endpoint: "{{CONTAINER_REGISTRY}}"
+              options: --user root
+            steps:
+              - checkout: self
+              - task: Bash@3
+                displayName: Determine Environment and Context
+                inputs:
+                  targetType: inline
+                  script: |-
+                    export KUBECONFIG=/workspace/.kube/config
+                    if [[ "$(Build.SourceBranch)" == "refs/heads/main" ]]; then
+                      ENVIRONMENT="dev"
+                      NAMESPACE_SUFFIX="dev"
+                    elif [[ "$(Build.SourceBranch)" =~ ^refs/tags/release-.* ]]; then
+                      ENVIRONMENT="prd"
+                      NAMESPACE_SUFFIX="prd"
+                    else
+                      echo "Unknown branch/tag pattern"
+                      exit 1
+                    fi
+                    ADO_PROJECT="$(System.TeamProject)"
+                    if [[ "$ADO_PROJECT" == "{{ADO_PROJECT}}" ]]; then
+                      if [[ "$ENVIRONMENT" == "dev" ]]; then
+                        K8S_CONTEXT="{{CLUSTER_DEV}}"
+                      else
+                        K8S_CONTEXT="{{CLUSTER_PROD}}"
+                      fi
+                    else
+                      K8S_CONTEXT="{{CLUSTER_DEFAULT}}"
+                    fi
+                    echo "##vso[task.setvariable variable=ENVIRONMENT]$ENVIRONMENT"
+                    echo "##vso[task.setvariable variable=K8S_CONTEXT]$K8S_CONTEXT"
+              - task: Bash@3
+                displayName: Deploy with Timoni
+                inputs:
+                  targetType: inline
+                  script: |-
+                    export KUBECONFIG=/workspace/.kube/config
+                    cd $(Build.SourcesDirectory)/.ci
+                    kubectl config use-context $(K8S_CONTEXT)
+                    timoni registry login $(containerRegistryFullName) --username $(global.acrUsername) --password $(global.acrPasswd)
+                    cat > runtime.yaml << EOF
+                    runtime:
+                      name: "$(ENVIRONMENT)"
+                    global:
+                      image:
+                        tag: "$(buildTag)"
+                    EOF
+                    timoni bundle apply -f timoni-bundle.cue -f runtime.yaml --kube-context $(K8S_CONTEXT)
+              - task: Bash@3
+                displayName: Verify Deployment
+                inputs:
+                  targetType: inline
+                  script: |-
+                    export KUBECONFIG=/workspace/.kube/config
+                    kubectl wait --for=condition=available --timeout=300s deployment/$(projectName)-$(serviceName) -n $(projectName)-$(ENVIRONMENT)
+                    kubectl get pods -n $(projectName)-$(ENVIRONMENT) -l app=$(projectName)-$(serviceName)

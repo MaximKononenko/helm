@@ -1,5 +1,12 @@
 job: kaniko_build
 displayName: Kaniko Build & Push
+variables:
+  - name: serviceName
+    value: "{{OB_SERVICE_NAME}}"
+  - name: dockerFile
+    value: "{{OB_SERVICE_DOCKERFILE}}"
+  - name: context
+    value: "{{OB_SERVICE_CONTEXT}}"
 steps:
   - task: Bash@3
     displayName: Set Build Variables
@@ -32,7 +39,6 @@ steps:
         echo "buildTag: $buildTag"
         echo "imageTag: $imageTag"
         echo "context: $context"
-  
   - task: Bash@3
     displayName: Kaniko Build & Push
     inputs:

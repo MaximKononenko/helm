@@ -1,0 +1,111 @@
+apiVersion: ops-box.io/v1
+kind: AdoPipelineDefinition
+metadata:
+  annotations:
+    ops-box.io/description: CI/CD pipeline for single-service Python microservices
+      with Kaniko builds and Timoni deployments
+    ops-box.io/display-name: Python Microservice CI/CD (Kaniko + Timoni)
+    ops-box.io/generated-from: ado-pipeline-python-kaniko-timoni
+    ops-box.io/generated-at: '2026-01-06T12:58:06.256271Z'
+  finalizers:
+  - kopf.zalando.org/KopfFinalizerMarker
+  labels:
+    ops-box.io/build-tool: kaniko
+    ops-box.io/deploy-tool: timoni
+    ops-box.io/language: python
+    ops-box.io/repo-type: single-service
+    ops-box.io/instance: 'true'
+  name: app-01-pipeline-test
+  namespace: ops-box
+spec:
+  draft: true
+  outputs:
+    pipeline:
+      gitDefinitionName: app-01-git
+      path: .ci/azure-pipelines.yml
+  pipelineDefinition:
+    name: $(Build.SourceBranchName).$(Build.BuildId)
+    pool: vmss-pr-eastus2-ado-cmp
+    stages:
+    - displayName: CI
+      jobs:
+      - baseTemplate: templates/jobs/kaniko-python-build.yml
+        job: template
+      stage: Build
+    - condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'],
+        'refs/tags/release-'))
+      dependsOn: Build
+      displayName: CD
+      jobs:
+      - container:
+          endpoint: Catalina ACR
+          image: catalina.azurecr.io/ops-box/timoni-cd:latest
+          options: --user root
+        displayName: Deploy to Kubernetes
+        job: deploy
+        steps:
+        - checkout: self
+        - displayName: Determine Environment and Context
+          inputs:
+            script: "export KUBECONFIG=/workspace/.kube/config\nif [[ \"$(Build.SourceBranch)\"\
+              \ == \"refs/heads/main\" ]]; then\n  ENVIRONMENT=\"dev\"\n  NAMESPACE_SUFFIX=\"\
+              dev\"\nelif [[ \"$(Build.SourceBranch)\" =~ ^refs/tags/release-.* ]];\
+              \ then\n  ENVIRONMENT=\"prd\"\n  NAMESPACE_SUFFIX=\"prd\"\nelse\n  echo\
+              \ \"Unknown branch/tag pattern\"\n  exit 1\nfi\nADO_PROJECT=\"$(System.TeamProject)\"\
+              \nif [[ \"$ADO_PROJECT\" == \"CMP\" ]]; then\n  if [[ \"$ENVIRONMENT\"\
+              \ == \"dev\" ]]; then\n    K8S_CONTEXT=\"aks-np-eastus-cmp-admin\"\n\
+              \  else\n    K8S_CONTEXT=\"aks-prd-eastus2-cmp-admin\"\n  fi\nelse\n\
+              \  K8S_CONTEXT=\"aks-prd-eastus2-n8n-admin\"\nfi\necho \"##vso[task.setvariable\
+              \ variable=ENVIRONMENT]$ENVIRONMENT\"\necho \"##vso[task.setvariable\
+              \ variable=K8S_CONTEXT]$K8S_CONTEXT\""
+            targetType: inline
+          task: Bash@3
+        - displayName: Deploy with Timoni
+          inputs:
+            script: "export KUBECONFIG=/workspace/.kube/config\ncd $(Build.SourcesDirectory)/.ci\n\
+              kubectl config use-context $(K8S_CONTEXT)\ntimoni registry login $(containerRegistryFullName)\
+              \ --username $(global.acrUsername) --password $(global.acrPasswd)\n\
+              cat > runtime.yaml << EOF\nruntime:\n  name: \"$(ENVIRONMENT)\"\nglobal:\n\
+              \  image:\n    tag: \"$(buildTag)\"\nEOF\ntimoni bundle apply -f timoni-bundle.cue\
+              \ -f runtime.yaml --kube-context $(K8S_CONTEXT)"
+            targetType: inline
+          task: Bash@3
+        - displayName: Verify Deployment
+          inputs:
+            script: 'export KUBECONFIG=/workspace/.kube/config
+
+              kubectl wait --for=condition=available --timeout=300s deployment/$(projectName)-$(serviceName)
+              -n $(projectName)-$(ENVIRONMENT)
+
+              kubectl get pods -n $(projectName)-$(ENVIRONMENT) -l app=$(projectName)-$(serviceName)'
+            targetType: inline
+          task: Bash@3
+      stage: Deploy
+      variables:
+        buildTag: $[ stageDependencies.Build.kaniko_build.outputs['buildVars.buildTag']
+          ]
+    trigger:
+      batch: true
+      branches:
+        include:
+        - main
+        - develop
+    variables:
+    - group: devops-credentials
+    - group: ACR Catalina
+    - name: serviceName
+      value: app-01
+    - name: projectName
+      value: app-01
+    - name: containerRegistry
+      value: Catalina ACR
+    - name: containerRegistryFullName
+      value: catalina.azurecr.io
+    - name: dockerFile
+      value: Dockerfile
+    - name: context
+      value: app-01
+  templatesSource:
+    basePath: templates/
+    gitDefinitionName: demo-app-01-git
+
