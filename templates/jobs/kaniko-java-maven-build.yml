@@ -52,17 +52,15 @@ steps:
       script: |
         echo "Running custom build command for $(serviceName)"
         $(buildCommand)
-  - task: Maven@3
+  - task: Bash@3
     displayName: Maven Build & Package (Default)
     condition: eq(variables['buildCommand'], '')
     inputs:
-      mavenPomFile: '$(Build.SourcesDirectory)/$(context)/pom.xml'
-      goals: 'clean package'
-      options: '-DskipTests'
-      publishJUnitResults: false
-      javaHomeOption: 'JDKVersion'
-      jdkVersionOption: '1.17'
-      mavenVersionOption: 'Default'
+      targetType: inline
+      workingDirectory: $(Build.SourcesDirectory)/$(context)
+      script: |
+        echo "Building Java/Maven service: $(serviceName)"
+        mvn clean package -DskipTests -T 1C -Duser.timezone=UTC
   - task: Bash@3
     displayName: Custom Test Command
     condition: ne(variables['testCommand'], '')
@@ -72,12 +70,15 @@ steps:
       script: |
         echo "Running custom test command for $(serviceName)"
         $(testCommand)
-  - task: Maven@3
+  - task: Bash@3
     displayName: Maven Test (Default)
     condition: and(eq(variables['testCommand'], ''), eq(variables['buildCommand'], ''))
     inputs:
-      mavenPomFile: '$(Build.SourcesDirectory)/$(context)/pom.xml'
-      goals: 'test'
+      targetType: inline
+      workingDirectory: $(Build.SourcesDirectory)/$(context)
+      script: |
+        echo "Running tests for Java/Maven service: $(serviceName)"
+        mvn test -T 1C -Duser.timezone=UTC
       publishJUnitResults: true
       testResultsFiles: '**/surefire-reports/TEST-*.xml'
       javaHomeOption: 'JDKVersion'

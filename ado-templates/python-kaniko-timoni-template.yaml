@@ -167,7 +167,7 @@ metadata:
         {
           "name": "OB_SERVICE_BUILD_COMMAND",
           "displayName": "Service Build Command (Per-Item)",
-          "description": "Custom build command per service (optional - uses language defaults if not specified)",
+          "description": "Custom build command per service (language-specific defaults applied if not specified)",
           "required": false,
           "scope": "per-item",
           "type": "string",
@@ -175,6 +175,11 @@ metadata:
           "resolveFrom": "item.buildCommand",
           "iterateOver": "gitdefinition.spec.purposes.source.services",
           "default": "",
+          "languageDefaults": {
+            "python": "",
+            "nodejs": "npm ci && npm run build --if-present && npm prune --production",
+            "java": "mvn clean package -DskipTests -T 1C -Duser.timezone=UTC"
+          },
           "hidden": true
         },
         {
