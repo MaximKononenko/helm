@@ -1,0 +1,108 @@
+job: kaniko_build
+displayName: Kaniko Build & Push (Node.js)
+variables:
+  - name: serviceName
+    value: "{{OB_SERVICE_NAME}}"
+  - name: dockerFile
+    value: "{{OB_SERVICE_DOCKERFILE}}"
+  - name: context
+    value: "{{OB_SERVICE_CONTEXT}}"
+  - name: buildCommand
+    value: "{{OB_SERVICE_BUILD_COMMAND}}"
+  - name: testCommand
+    value: "{{OB_SERVICE_TEST_COMMAND}}"
+steps:
+  - task: Bash@3
+    displayName: Set Build Variables
+    name: buildVars
+    inputs:
+      targetType: inline
+      script: |-
+        service="$(serviceName)"
+        echo "##vso[task.setvariable variable=service;isOutput=false]$service"
+
+        acrRepoName="$(projectName)"
+        echo "##vso[task.setvariable variable=acrRepoName;isOutput=false]$acrRepoName"
+
+        dockerFile="$(dockerFile)"
+        echo "##vso[task.setvariable variable=dockerFile;isOutput=false]$dockerFile"
+
+        buildTag="$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
+        echo "##vso[task.setvariable variable=buildTag;isOutput=true]$buildTag"
+
+        imageTag="$(containerRegistryFullName)/$(projectName)/$(serviceName):$buildTag"
+        echo "##vso[task.setvariable variable=imageTag;isOutput=false]$imageTag"
+
+        context="$(context)"
+        echo "##vso[task.setvariable variable=context;isOutput=false]$context"
+
+        echo "=== Build Variables (Node.js) ==="
+        echo "service: $service"
+        echo "acrRepoName: $acrRepoName"
+        echo "dockerFile: $dockerFile"
+        echo "buildTag: $buildTag"
+        echo "imageTag: $imageTag"
+        echo "context: $context"
+  - task: NodeTool@0
+    displayName: Use Node.js
+    inputs:
+      versionSpec: '18.x'
+  - task: Bash@3
+    displayName: Custom Build Command
+    condition: ne(variables['buildCommand'], '')
+    inputs:
+      targetType: inline
+      workingDirectory: $(Build.SourcesDirectory)/$(context)
+      script: |
+        echo "Running custom build command for $(serviceName)"
+        $(buildCommand)
+  - task: Bash@3
+    displayName: NPM Install & Build (Default)
+    condition: eq(variables['buildCommand'], '')
+    inputs:
+      targetType: inline
+      workingDirectory: $(Build.SourcesDirectory)/$(context)
+      script: |
+        echo "Building Node.js service: $(serviceName)"
+        npm ci
+        npm run build --if-present
+        npm prune --production
+  - task: Bash@3
+    displayName: Custom Test Command
+    condition: ne(variables['testCommand'], '')
+    inputs:
+      targetType: inline
+      workingDirectory: $(Build.SourcesDirectory)/$(context)
+      script: |
+        echo "Running custom test command for $(serviceName)"
+        $(testCommand)
+  - task: Bash@3
+    displayName: NPM Test (Default)
+    condition: and(eq(variables['testCommand'], ''), eq(variables['buildCommand'], ''))
+    inputs:
+      targetType: inline
+      workingDirectory: $(Build.SourcesDirectory)/$(context)
+      script: |
+        echo "Running tests for Node.js service: $(serviceName)"
+        npm test --if-present
+  - task: Bash@3
+    displayName: Kaniko Build & Push (Node.js)
+    inputs:
+      targetType: inline
+      script: |
+        echo "Running Kaniko Build & Push for Node.js service: $(serviceName)"
+        mkdir -p $(Pipeline.Workspace)/.kaniko-docker
+        echo "{\"auths\":{\"$(containerRegistryFullName)\":{\"username\":\"$(global.acrUsername)\",\"password\":\"$(global.acrPasswd)\"}}}" > $(Pipeline.Workspace)/.kaniko-docker/config.json
+
+        docker login $(containerRegistryFullName) -u $(global.acrUsername) -p $(global.acrPasswd)
+        docker pull $(containerRegistryFullName)/kaniko/executor:latest
+
+        echo "Starting Kaniko build with Dockerfile: $(dockerFile)"
+        docker run --rm \
+          -v $(Pipeline.Workspace)/s:/workspace \
+          -v $(Pipeline.Workspace)/.kaniko-docker:/kaniko/.docker \
+          $(containerRegistryFullName)/kaniko/executor:v1.23.1 \
+          --context=$(context) \
+          --dockerfile=$(dockerFile) \
+          --destination=$(imageTag)
+    name: kanikoOutput

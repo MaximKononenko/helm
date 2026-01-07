@@ -109,6 +109,7 @@ metadata:
           "type": "string",
           "autoResolve": true,
           "resolveFrom": "system.acrVariableGroup",
+          "default": "ACR Catalina",
           "placeholder": "acr-credentials",
           "helpUrl": "https://docs.ops-box.io/ado/variable-groups"
         },
@@ -175,6 +176,32 @@ metadata:
           "hidden": true
         },
         {
+          "name": "OB_SERVICE_BUILD_COMMAND",
+          "displayName": "Service Build Command (Per-Item)",
+          "description": "Custom build command per service (optional - uses language defaults if not specified)",
+          "required": false,
+          "scope": "per-item",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "item.buildCommand",
+          "iterateOver": "gitdefinition.spec.services",
+          "default": "",
+          "hidden": true
+        },
+        {
+          "name": "OB_SERVICE_TEST_COMMAND",
+          "displayName": "Service Test Command (Per-Item)",
+          "description": "Custom test command per service (optional - uses language defaults if not specified)",
+          "required": false,
+          "scope": "per-item",
+          "type": "string",
+          "autoResolve": true,
+          "resolveFrom": "item.testCommand",
+          "iterateOver": "gitdefinition.spec.services",
+          "default": "",
+          "hidden": true
+        },
+        {
           "name": "PROJECT_NAME",
           "wizardStep": "project",
           "displayName": "Project Name",
@@ -184,6 +211,7 @@ metadata:
           "type": "string",
           "autoResolve": true,
           "resolveFrom": "application.spec.projectName",
+          "default": "app-01",
           "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
           "minLength": 3,
           "maxLength": 63,
@@ -200,6 +228,7 @@ metadata:
           "type": "string",
           "autoResolve": true,
           "resolveFrom": "system.containerRegistry",
+          "default": "Catalina ACR",
           "pattern": "^[a-z0-9]+$",
           "placeholder": "myregistry",
           "helpUrl": "https://docs.ops-box.io/registry/configuration"
@@ -215,6 +244,7 @@ metadata:
           "format": "url",
           "autoResolve": true,
           "resolveFrom": "system.containerRegistryFullName",
+          "default": "catalina.azurecr.io",
           "pattern": "^[a-z0-9]+\\.azurecr\\.io$",
           "placeholder": "myregistry.azurecr.io",
           "hidden": true
@@ -229,6 +259,7 @@ metadata:
           "type": "string",
           "autoResolve": true,
           "resolveFrom": "application.spec.adoProject",
+          "default": "CMP",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9-_ ]*$",
           "minLength": 1,
           "maxLength": 64,
@@ -245,6 +276,7 @@ metadata:
           "type": "string",
           "autoResolve": true,
           "resolveFrom": "remotecluster.labels[ops-box.io/environment=dev]",
+          "default": "aks-np-eastus-cmp-admin",
           "placeholder": "aks-dev-cluster",
           "helpUrl": "https://docs.ops-box.io/clusters/configuration"
         },
@@ -258,6 +290,7 @@ metadata:
           "type": "string",
           "autoResolve": true,
           "resolveFrom": "remotecluster.labels[ops-box.io/environment=prod]",
+          "default": "aks-prd-eastus2-cmp-admin",
           "placeholder": "aks-prod-cluster",
           "helpUrl": "https://docs.ops-box.io/clusters/configuration"
         }
