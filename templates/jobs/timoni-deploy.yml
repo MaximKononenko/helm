@@ -1,0 +1,102 @@
+job: deploy
+displayName: Deploy {{OB_SERVICE_NAME}} with Timoni
+variables:
+  - name: serviceName
+    value: "{{OB_SERVICE_NAME}}"
+  - name: serviceContext
+    value: "{{OB_SERVICE_CONTEXT}}"
+  - name: buildTag
+    value: "$[ stageDependencies.Build.Build_{{OB_SERVICE_NAME}}_service.outputs['buildVars.buildTag'] ]"
+steps:
+  - checkout: self
+  - task: Bash@3
+    displayName: Determine Environment and Context
+    inputs:
+      targetType: inline
+      script: |-
+        export KUBECONFIG=/workspace/.kube/config
+
+        # Determine environment from branch
+        if [[ "$(Build.SourceBranch)" == "refs/heads/main" ]]; then
+          ENVIRONMENT="dev"
+          NAMESPACE_SUFFIX="dev"
+        elif [[ "$(Build.SourceBranch)" =~ ^refs/tags/release-.* ]]; then
+          ENVIRONMENT="prd"
+          NAMESPACE_SUFFIX="prd"
+        else
+          echo "Unknown branch/tag pattern"
+          exit 1
+        fi
+
+        # Determine K8s context based on ADO project and environment
+        ADO_PROJECT="$(System.TeamProject)"
+        if [[ "$ADO_PROJECT" == "{{ADO_PROJECT}}" ]]; then
+          if [[ "$ENVIRONMENT" == "dev" ]]; then
+            K8S_CONTEXT="{{CLUSTER_DEV}}"
+          else
+            K8S_CONTEXT="{{CLUSTER_PROD}}"
+          fi
+        else
+          K8S_CONTEXT="{{CLUSTER_DEFAULT}}"
+        fi
+
+        echo "=== Deployment Configuration for $(serviceName) ==="
+        echo "Environment: $ENVIRONMENT"
+        echo "Namespace: $(projectName)-$NAMESPACE_SUFFIX"
+        echo "K8s Context: $K8S_CONTEXT"
+        echo "Image Tag: $(buildTag)"
+
+        # Export as pipeline variables
+        echo "##vso[task.setvariable variable=ENVIRONMENT]$ENVIRONMENT"
+        echo "##vso[task.setvariable variable=K8S_CONTEXT]$K8S_CONTEXT"
+        echo "##vso[task.setvariable variable=IMAGE_TAG]$(buildTag)"
+  - task: Bash@3
+    displayName: Deploy with Timoni
+    inputs:
+      targetType: inline
+      script: |-
+        export KUBECONFIG=/workspace/.kube/config
+        cd $(Build.SourcesDirectory)/$(serviceContext)/.ci
+
+        echo "Switching to k8s context: $(K8S_CONTEXT)"
+        kubectl config use-context $(K8S_CONTEXT)
+
+        echo "Deploying $(serviceName) to $(ENVIRONMENT) environment"
+        echo "Image tag: $(IMAGE_TAG)"
+
+        # Login to ACR for Timoni to pull OCI module
+        timoni registry login $(containerRegistryFullName) \
+          --username $(global.acrUsername) \
+          --password $(global.acrPasswd)
+
+        # Create runtime values file
+        cat > runtime.yaml << EOF
+        runtime:
+          name: "$(ENVIRONMENT)"
+        global:
+          image:
+            tag: "$(IMAGE_TAG)"
+        EOF
+
+        # Apply Timoni bundle for this service
+        timoni bundle apply \
+          -f timoni-bundle.cue \
+          -f runtime.yaml \
+          --kube-context $(K8S_CONTEXT)
+
+        echo "Deployment of $(serviceName) completed successfully"
+  - task: Bash@3
+    displayName: Verify Deployment
+    inputs:
+      targetType: inline
+      script: |-
+        export KUBECONFIG=/workspace/.kube/config
+
+        echo "Waiting for deployment of $(serviceName) to be ready..."
+        kubectl wait --for=condition=available \
+          --timeout=300s \
+          deployment/$(projectName)-$(serviceName) \
+          -n $(projectName)-$(ENVIRONMENT)
+
+        echo "Deployment verification completed for $(serviceName)"
+        kubectl get pods -n $(projectName)-$(ENVIRONMENT) -l app=$(projectName)-$(serviceName)

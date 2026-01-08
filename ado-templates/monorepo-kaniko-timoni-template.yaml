@@ -17,7 +17,14 @@ metadata:
         "Build": {
           "python": "templates/jobs/kaniko-python-build.yml",
           "java": "templates/jobs/kaniko-java-maven-build.yml",
-          "nodejs": "templates/jobs/kaniko-nodejs-build.yml"
+          "nodejs": "templates/jobs/kaniko-nodejs-build.yml",
+          "kotlin": "templates/jobs/kaniko-kotlin-gradle-build.yml"
+        },
+        "Deploy": {
+          "python": "templates/jobs/timoni-deploy.yml",
+          "java": "templates/jobs/timoni-deploy.yml",
+          "nodejs": "templates/jobs/timoni-deploy.yml",
+          "kotlin": "templates/jobs/timoni-deploy.yml"
         }
       }
     ops-box.io/wizard-config: |
