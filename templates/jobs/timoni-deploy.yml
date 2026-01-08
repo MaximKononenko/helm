@@ -56,7 +56,7 @@ steps:
       targetType: inline
       script: |-
         export KUBECONFIG=/workspace/.kube/config
-        cd $(Build.SourcesDirectory)/$(serviceContext)/.ci
+        cd $(Build.SourcesDirectory)/.ci
 
         echo "Switching to k8s context: $(K8S_CONTEXT)"
         kubectl config use-context $(K8S_CONTEXT)
@@ -80,7 +80,7 @@ steps:
 
         # Apply Timoni bundle for this service
         timoni bundle apply \
-          -f timoni-bundle.cue \
+          -f timoni-$(serviceName)-bundle.cue \
           -f runtime.yaml \
           --kube-context $(K8S_CONTEXT)
 

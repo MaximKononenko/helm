@@ -364,6 +364,5 @@ spec:
         dependsOn: Build
         condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/release-'))
         jobs:
-
-# PipelineConstructor will inject deployment jobs here, one per service
-# Placeholder for dynamic job injection
+        # PipelineConstructor will inject deployment jobs here, one per service
+        # Placeholder for dynamic job injection
