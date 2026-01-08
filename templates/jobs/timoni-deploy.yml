@@ -1,5 +1,6 @@
 job: deploy
 displayName: Deploy {{OB_SERVICE_NAME}} with Timoni
+condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/release-'))
 variables:
   - name: serviceName
     value: "{{OB_SERVICE_NAME}}"
