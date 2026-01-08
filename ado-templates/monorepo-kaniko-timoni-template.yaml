@@ -359,10 +359,10 @@ spec:
         #   job: template
         #   jobId: Build_worker_service
         # Placeholder for dynamic baseTemplate injection
-      - stage: template
+      - stage: Deploy
         displayName: CD
         dependsOn: Build
-        baseTemplate: "templates/stages/stage-cd-conditional.yml"
+        condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/release-'))
         jobs:
         # PipelineConstructor will inject baseTemplate entries here, one per service
         # Example output after PipelineConstructor:
