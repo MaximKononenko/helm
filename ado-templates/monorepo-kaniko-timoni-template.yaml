@@ -27,284 +27,411 @@ metadata:
           "kotlin": "templates/jobs/timoni-deploy.yml"
         }
       }
-    ops-box.io/wizard-config: |
+    ops-box.io/template-config: |
       {
-        "steps": [
-          {"id": "project", "label": "Project Setup"},
-          {"id": "source", "label": "Source Configuration"},
-          {"id": "ci", "label": "Build Configuration"},
-          {"id": "cd", "label": "Deployment Configuration"},
-          {"id": "output", "label": "Output Configuration"}
-        ]
+        "wizard_config": {
+          "steps": {
+            "project": {
+              "title": "Project Setup",
+              "fields": [
+                {
+                  "fieldId": "projectName",
+                  "type": "string",
+                  "displayName": "Project Name",
+                  "description": "Project name for resource grouping",
+                  "required": true,
+                  "validation": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+                  "minLength": 3,
+                  "maxLength": 63,
+                  "placeholder": "my-project",
+                  "default": "app-01",
+                  "helpUrl": "https://docs.ops-box.io/projects/naming"
+                },
+                {
+                  "fieldId": "adoProject",
+                  "type": "string",
+                  "displayName": "ADO Project",
+                  "description": "Azure DevOps project name",
+                  "required": true,
+                  "validation": "^[A-Za-z0-9][A-Za-z0-9-_ ]*$",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "placeholder": "MyProject",
+                  "default": "CMP",
+                  "helpUrl": "https://docs.ops-box.io/ado/projects"
+                }
+              ]
+            },
+            "source": {
+              "title": "Source Configuration",
+              "fields": [
+                {
+                  "fieldId": "sourceRepository",
+                  "type": "gitdefinition",
+                  "displayName": "Source Repository",
+                  "description": "GitDefinition name for source code repository",
+                  "required": false,
+                  "default": "app-01-git",
+                  "gitPurpose": "source"
+                }
+              ]
+            },
+            "ci": {
+              "title": "Build Configuration",
+              "fields": [
+                {
+                  "fieldId": "adoAgentPool",
+                  "type": "string",
+                  "displayName": "ADO Agent Pool",
+                  "description": "Azure DevOps agent pool name",
+                  "required": true,
+                  "default": "Default",
+                  "placeholder": "Default",
+                  "helpUrl": "https://docs.ops-box.io/ado/agent-pools"
+                }
+              ]
+            },
+            "cd": {
+              "title": "Deployment Configuration",
+              "fields": [
+                {
+                  "fieldId": "clusterDev",
+                  "type": "string",
+                  "displayName": "Development Cluster",
+                  "description": "Kubernetes cluster for dev environment",
+                  "required": true,
+                  "default": "aks-np-eastus-cmp-admin",
+                  "placeholder": "aks-dev-cluster",
+                  "helpUrl": "https://docs.ops-box.io/clusters/configuration"
+                },
+                {
+                  "fieldId": "clusterProd",
+                  "type": "string",
+                  "displayName": "Production Cluster",
+                  "description": "Kubernetes cluster for prod environment",
+                  "required": true,
+                  "default": "aks-prd-eastus2-cmp-admin",
+                  "placeholder": "aks-prod-cluster",
+                  "helpUrl": "https://docs.ops-box.io/clusters/configuration"
+                }
+              ]
+            },
+            "output": {
+              "title": "Output Configuration",
+              "fields": [
+                {
+                  "fieldId": "outputRepository",
+                  "type": "gitdefinition",
+                  "displayName": "Output Repository",
+                  "description": "GitDefinition name for pipeline output",
+                  "required": true,
+                  "default": "app-01-git",
+                  "gitPurpose": "output",
+                  "helpUrl": "https://docs.ops-box.io/gitdefinition/output"
+                }
+              ]
+            }
+          },
+          "deployment_strategy_presets": {
+            "CMP": {
+              "dev": "aks-np-eastus-cmp-admin",
+              "prod": "aks-prd-eastus2-cmp-admin"
+            },
+            "Digital": {
+              "dev": "aks-dev-westeurope-digital",
+              "prod": "aks-prd-westeurope-digital"
+            },
+            "default": {
+              "dev": "aks-np-eastus-cmp-admin",
+              "prod": "aks-prd-eastus2-cmp-admin"
+            }
+          }
+        }
       }
+    # Deployment Artifacts Templates (V2 refactoring - structured annotation)
+    # Single source of truth for all deployment artifact templates
+    # Structure mirrors deploymentArtifacts spec for consistency
+    # BFF discovers available templates from this annotation automatically
+    ops-box.io/deployment-artifacts-templates: |
+      timoniBundles:
+        deployment:
+          label: "Standard Deployment"
+          description: "Stateless applications (APIs, web services)"
+          timoniModule: "oci://catalina.azurecr.io/classic-deployment:0.2.3"
+          template: |
+            // Timoni Bundle for {{PROJECT_NAME}}
+            // Generated by ops-box self-service wizard
+
+            runtime: {
+              name: string
+            }
+
+            global: {
+              image: {
+                tag: *"latest" | string
+              }
+            }
+
+            bundle: {
+              apiVersion: "v1alpha1"
+              name:       "{{PROJECT_NAME}}"
+              instances: {
+                "{{PROJECT_NAME}}-{{OB_SERVICE_NAME}}": {
+                  module: {
+                    url:     "oci://catalina.azurecr.io/classic-deployment"
+                    version: "0.2.3"
+                  }
+                  namespace: "{{PROJECT_NAME}}-\(runtime.name)"
+                  values: {
+                    image: {
+                      repository: "{{CONTAINER_REGISTRY}}.azurecr.io/{{PROJECT_NAME}}/{{OB_SERVICE_NAME}}"
+                      tag:        global.image.tag
+                      digest:     ""
+                      pullPolicy: "IfNotPresent"
+                    }
+              
+                    // Environment-specific replicas
+                    replicas: *1 | int
+                    if runtime.name == "prd" {
+                      replicas: 2
+                    }
+              
+                    service: port: {{OB_SERVICE_PORT}}
+                    containerPort: {{OB_SERVICE_PORT}}
+                    probes: {
+                      liveness: {
+                        path: "{{OB_HEALTH_PATH}}"
+                        initialDelaySeconds: 10
+                        periodSeconds: 30
+                      }
+                      readiness: {
+                        path: "{{OB_HEALTH_PATH}}"
+                        initialDelaySeconds: 10
+                        periodSeconds: 30
+                      }
+                    }
+                    env: {
+                      LOG_LEVEL: "INFO"
+                    }
+              
+                    // Environment-specific resources
+                    resources: {
+                      if runtime.name == "prd" {
+                        requests: {
+                          cpu:    "{{OB_CPU_REQUEST}}"
+                          memory: "{{OB_MEMORY_REQUEST}}"
+                        }
+                        limits: {
+                          cpu:    "{{OB_CPU_LIMIT}}"
+                          memory: "{{OB_MEMORY_LIMIT}}"
+                        }
+                      }
+                      if runtime.name != "prd" {
+                        requests: {
+                          cpu:    "{{OB_CPU_REQUEST}}"
+                          memory: "{{OB_MEMORY_REQUEST}}"
+                        }
+                        limits: {
+                          cpu:    "{{OB_CPU_LIMIT}}"
+                          memory: "{{OB_MEMORY_LIMIT}}"
+                        }
+                      }
+                    }
+              
+                    // Environment-specific ingress
+                    ingress: {
+                      enabled: false
+                      annotations: {
+                        "kubernetes.io/ingress.class": "nginx"
+                      }
+                      hosts: [
+                        {
+                          if runtime.name == "prd" {
+                            host: "{{PROJECT_NAME}}.catmktg.com"
+                          }
+                          if runtime.name != "prd" {
+                            host: "{{PROJECT_NAME}}-\(runtime.name).catmktg.com"
+                          }
+                          paths: [
+                            {
+                              path:     "/"
+                              pathType: "Prefix"
+                            },
+                          ]
+                        },
+                      ]
+                    }
+                  }
+                }
+              }
+            }
     ops-box.io/placeholders: |
       [
         {
-          "name": "OB_PIPELINE_NAME",
-          "wizardStep": "project",
-          "displayName": "Pipeline Name",
-          "description": "Unique name for the pipeline (auto-filled from project name)",
-          "required": true,
-          "scope": "global",
-          "type": "string",
-          "crField": "metadata.name",
-          "autoResolve": true,
-          "resolveFrom": "application.spec.projectName",
-          "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-          "minLength": 3,
-          "maxLength": 63,
-          "placeholder": "my-app-pipeline",
-          "helpUrl": "https://docs.ops-box.io/pipelines/naming"
-        },
-        {
           "name": "SOURCE_GIT_DEFINITION",
-          "wizardStep": "source",
-          "displayName": "Source Repository",
-          "description": "GitDefinition name for source code repository",
-          "required": true,
           "scope": "global",
-          "type": "gitdefinition",
-          "gitPurpose": "source",
-          "crField": "spec.sourceRepository.gitDefinitionName",
-          "default": "app-01-git",
-          "hidden": true
+          "wizardRef": "sourceRepository",
+          "comment": "Computed from sourceRepository field, seeded by BFF",
+          "crField": "spec.sourceRepository.gitDefinitionName"
         },
         {
           "name": "TEMPLATES_GIT_DEFINITION",
-          "wizardStep": "ci",
-          "displayName": "Templates Repository",
-          "description": "GitDefinition name for pipeline templates",
-          "required": true,
           "scope": "global",
-          "type": "gitdefinition",
-          "gitPurpose": "templates",
+          "resolveFrom": "constant",
           "default": "demo-app-01-git",
-          "hidden": true
+          "crField": "spec.templatesSource.gitDefinitionName"
         },
         {
           "name": "OUTPUT_GIT_DEFINITION",
-          "wizardStep": "output",
-          "displayName": "Output Repository",
-          "description": "GitDefinition name for pipeline output",
-          "required": true,
           "scope": "global",
-          "type": "gitdefinition",
-          "gitPurpose": "output",
-          "crField": "spec.outputs.pipeline.gitDefinitionName",
-          "default": "app-01-git",
-          "helpUrl": "https://docs.ops-box.io/gitdefinition/output"
+          "wizardRef": "outputRepository",
+          "default": "{{PROJECT_NAME}}-git",
+          "comment": "From wizard outputRepository field, defaults to {projectName}-git if not provided",
+          "crField": "spec.outputs.pipeline.gitDefinitionName"
         },
         {
           "name": "ADO_AGENT_POOL",
-          "wizardStep": "ci",
-          "displayName": "ADO Agent Pool",
-          "description": "Azure DevOps agent pool name",
-          "required": true,
           "scope": "global",
-          "type": "string",
-          "default": "Default",
-          "placeholder": "Default",
-          "helpUrl": "https://docs.ops-box.io/ado/agent-pools"
+          "wizardRef": "adoAgentPool",
+          "comment": "Seeded by BFF from wizard",
+          "crField": "spec.adoAgentPool",
+          "default": "Default"
         },
         {
           "name": "ACR_VARIABLE_GROUP",
-          "wizardStep": "ci",
-          "displayName": "ACR Variable Group",
-          "description": "Azure DevOps variable group for container registry credentials",
-          "required": true,
           "scope": "global",
-          "type": "string",
-          "autoResolve": true,
-          "resolveFrom": "system.acrVariableGroup",
-          "default": "ACR Catalina",
-          "placeholder": "acr-credentials",
-          "helpUrl": "https://docs.ops-box.io/ado/variable-groups"
+          "resolveFrom": "constant",
+          "default": "ACR Catalina"
         },
         {
           "name": "OB_SERVICES",
-          "wizardStep": "ci",
-          "displayName": "Services Configuration",
-          "description": "Array of service objects from GitDefinition (monorepo with multiple services)",
-          "required": true,
           "scope": "global",
-          "type": "object",
-          "autoResolve": true,
-          "resolveFrom": "gitdefinition.spec.services",
-          "hidden": true,
-          "helpUrl": "https://docs.ops-box.io/gitdefinition/services"
+          "resolveFrom": "gitdefinition.ops-box.io/v1.{{SOURCE_GIT_DEFINITION}}.spec.purposes.source.services"
         },
         {
           "name": "OB_SERVICE_NAME",
-          "displayName": "Service Name (Per-Item)",
-          "description": "Service name resolved per service in monorepo",
-          "required": true,
           "scope": "per-item",
-          "type": "string",
-          "autoResolve": true,
-          "resolveFrom": "item.name",
-          "iterateOver": "gitdefinition.spec.purposes.source.services",
-          "hidden": true
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "name"
         },
         {
           "name": "OB_SERVICE_CONTEXT",
-          "displayName": "Service Context (Per-Item)",
-          "description": "Service source path resolved per service in monorepo",
-          "required": true,
           "scope": "per-item",
-          "type": "string",
-          "autoResolve": true,
-          "resolveFrom": "item.serviceSrcPath",
-          "iterateOver": "gitdefinition.spec.purposes.source.services",
-          "hidden": true
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "serviceSrcPath"
         },
         {
           "name": "OB_SERVICE_DOCKERFILE",
-          "displayName": "Service Dockerfile (Per-Item)",
-          "description": "Dockerfile path resolved per service in monorepo",
-          "required": false,
           "scope": "per-item",
-          "type": "string",
-          "autoResolve": true,
-          "resolveFrom": "item.dockerfilePath",
-          "iterateOver": "gitdefinition.spec.purposes.source.services",
-          "default": "Dockerfile",
-          "hidden": true
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "dockerfilePath",
+          "default": "Dockerfile"
         },
         {
           "name": "OB_SERVICE_LANGUAGE",
-          "displayName": "Service Language (Per-Item)",
-          "description": "Programming language resolved per service in monorepo",
-          "required": true,
           "scope": "per-item",
-          "type": "string",
-          "autoResolve": true,
-          "resolveFrom": "item.language",
-          "iterateOver": "gitdefinition.spec.purposes.source.services",
-          "hidden": true
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "language"
         },
         {
           "name": "OB_SERVICE_BUILD_COMMAND",
-          "displayName": "Service Build Command (Per-Item)",
-          "description": "Custom build command per service (language-specific defaults applied if not specified)",
-          "required": false,
           "scope": "per-item",
-          "type": "string",
-          "autoResolve": true,
-          "resolveFrom": "item.buildCommand",
-          "iterateOver": "gitdefinition.spec.purposes.source.services",
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "buildCommand",
           "default": "",
           "languageDefaults": {
             "python": "",
             "nodejs": "npm ci && npm run build --if-present && npm prune --production",
             "java": "mvn clean package -DskipTests -T 1C -Duser.timezone=UTC"
-          },
-          "hidden": true
+          }
         },
         {
           "name": "OB_SERVICE_TEST_COMMAND",
-          "displayName": "Service Test Command (Per-Item)",
-          "description": "Custom test command per service (optional - uses language defaults if not specified)",
-          "required": false,
           "scope": "per-item",
-          "type": "string",
-          "autoResolve": true,
-          "resolveFrom": "item.testCommand",
-          "iterateOver": "gitdefinition.spec.purposes.source.services",
-          "default": "",
-          "hidden": true
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "testCommand",
+          "default": ""
+        },
+        {
+          "name": "OB_SERVICE_PORT",
+          "scope": "per-item",
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "port",
+          "default": "8080"
+        },
+        {
+          "name": "OB_HEALTH_PATH",
+          "scope": "per-item",
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "healthCheck.path",
+          "default": "/health"
+        },
+        {
+          "name": "OB_CPU_REQUEST",
+          "scope": "per-item",
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "resources.requests.cpu",
+          "default": "100m"
+        },
+        {
+          "name": "OB_MEMORY_REQUEST",
+          "scope": "per-item",
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "resources.requests.memory",
+          "default": "128Mi"
+        },
+        {
+          "name": "OB_CPU_LIMIT",
+          "scope": "per-item",
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "resources.limits.cpu",
+          "default": "500m"
+        },
+        {
+          "name": "OB_MEMORY_LIMIT",
+          "scope": "per-item",
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "resources.limits.memory",
+          "default": "512Mi"
         },
         {
           "name": "PROJECT_NAME",
-          "wizardStep": "project",
-          "displayName": "Project Name",
-          "description": "Project name for resource grouping",
-          "required": true,
           "scope": "global",
-          "type": "string",
-          "autoResolve": true,
-          "resolveFrom": "application.spec.projectName",
-          "default": "app-01",
-          "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-          "minLength": 3,
-          "maxLength": 63,
-          "placeholder": "my-project",
-          "helpUrl": "https://docs.ops-box.io/projects/naming"
+          "wizardRef": "projectName",
+          "comment": "Seeded by BFF from wizard"
         },
         {
           "name": "CONTAINER_REGISTRY",
-          "wizardStep": "ci",
-          "displayName": "Container Registry",
-          "description": "Container registry hostname (without .azurecr.io)",
-          "required": true,
           "scope": "global",
-          "type": "string",
-          "autoResolve": true,
-          "resolveFrom": "system.containerRegistry",
-          "default": "Catalina ACR",
-          "pattern": "^[a-z0-9]+$",
-          "placeholder": "myregistry",
-          "helpUrl": "https://docs.ops-box.io/registry/configuration"
+          "resolveFrom": "constant",
+          "default": "Catalina ACR"
         },
         {
           "name": "CONTAINER_REGISTRY_FULL_NAME",
-          "wizardStep": "ci",
-          "displayName": "Container Registry Full Name",
-          "description": "Full container registry URL",
-          "required": true,
           "scope": "global",
-          "type": "string",
-          "format": "url",
-          "autoResolve": true,
-          "resolveFrom": "system.containerRegistryFullName",
-          "default": "catalina.azurecr.io",
-          "pattern": "^[a-z0-9]+\\.azurecr\\.io$",
-          "placeholder": "myregistry.azurecr.io",
-          "hidden": true
+          "resolveFrom": "constant",
+          "default": "catalina.azurecr.io"
         },
         {
           "name": "ADO_PROJECT",
-          "wizardStep": "project",
-          "displayName": "ADO Project",
-          "description": "Azure DevOps project name",
-          "required": true,
           "scope": "global",
-          "type": "string",
-          "autoResolve": true,
-          "resolveFrom": "application.spec.adoProject",
-          "default": "CMP",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9-_ ]*$",
-          "minLength": 1,
-          "maxLength": 64,
-          "placeholder": "MyProject",
-          "helpUrl": "https://docs.ops-box.io/ado/projects"
+          "wizardRef": "adoProject",
+          "comment": "Seeded by BFF from wizard",
+          "crField": "spec.adoProject"
         },
         {
           "name": "CLUSTER_DEV",
-          "wizardStep": "cd",
-          "displayName": "Development Cluster",
-          "description": "Kubernetes cluster for dev environment",
-          "required": true,
-          "scope": "global",
-          "type": "string",
-          "autoResolve": true,
-          "resolveFrom": "remotecluster.labels[ops-box.io/environment=dev]",
-          "default": "aks-np-eastus-cmp-admin",
-          "placeholder": "aks-dev-cluster",
-          "helpUrl": "https://docs.ops-box.io/clusters/configuration"
+          "scope": "lookup",
+          "lookupTable": "deployment_strategy_presets",
+          "lookupKey": "{{ADO_PROJECT}}",
+          "lookupField": "dev"
         },
         {
           "name": "CLUSTER_PROD",
-          "wizardStep": "cd",
-          "displayName": "Production Cluster",
-          "description": "Kubernetes cluster for prod environment",
-          "required": true,
-          "scope": "global",
-          "type": "string",
-          "autoResolve": true,
-          "resolveFrom": "remotecluster.labels[ops-box.io/environment=prod]",
-          "default": "aks-prd-eastus2-cmp-admin",
-          "placeholder": "aks-prod-cluster",
-          "helpUrl": "https://docs.ops-box.io/clusters/configuration"
+          "scope": "lookup",
+          "lookupTable": "deployment_strategy_presets",
+          "lookupKey": "{{ADO_PROJECT}}",
+          "lookupField": "prod"
         }
       ]
 spec:
@@ -364,12 +491,13 @@ spec:
         dependsOn: Build
         condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/release-'))
         jobs:
-        # PipelineConstructor will inject baseTemplate entries here, one per service
-        # Example output after PipelineConstructor:
-        # - baseTemplate: templates/jobs/timoni-deploy.yml
-        #   job: template
-        #   jobId: Deploy_api_service
-        # - baseTemplate: templates/jobs/timoni-deploy.yml  
-        #   job: template
-        #   jobId: Deploy_worker_service
-        # Placeholder for dynamic baseTemplate injection
+
+# PipelineConstructor will inject baseTemplate entries here, one per service
+# Example output after PipelineConstructor:
+# - baseTemplate: templates/jobs/timoni-deploy.yml
+#   job: template
+#   jobId: Deploy_api_service
+# - baseTemplate: templates/jobs/timoni-deploy.yml  
+#   job: template
+#   jobId: Deploy_worker_service
+# Placeholder for dynamic baseTemplate injection
