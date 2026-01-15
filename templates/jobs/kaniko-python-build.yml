@@ -1,5 +1,5 @@
-job: kaniko_build
-displayName: Kaniko Build & Push
+job: kaniko_build_{{OB_SERVICE_NAME}}
+displayName: Kaniko Build & Push {{OB_SERVICE_NAME}} (Python)
 variables:
   - name: serviceName
     value: "{{OB_SERVICE_NAME}}"

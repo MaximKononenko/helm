@@ -1,4 +1,4 @@
-job: deploy
+job: deploy_{{OB_SERVICE_NAME}}
 displayName: Deploy {{OB_SERVICE_NAME}} with Timoni
 variables:
   - name: serviceName

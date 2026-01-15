@@ -18,6 +18,11 @@ metadata:
           "python": "templates/jobs/kaniko-python-build.yml"
         }
       }
+        # Deployment Artifacts Templates (V2 refactoring - structured annotation)
+    # IMPORTANT: Awoid setting default value for "fieldId": "adoAgentPool" here to allow 
+    # wizard override. It affects auto-detection logic for application self-service wizard.
+    # With emptu value it will auto-detect based on ADO project using lookup table. But you
+    # can still override it manually.
     ops-box.io/template-config: |
       {
         "wizard_config": {
@@ -72,12 +77,17 @@ metadata:
               "fields": [
                 {
                   "fieldId": "adoAgentPool",
-                  "type": "string",
+                  "type": "select",
                   "displayName": "ADO Agent Pool",
-                  "description": "Azure DevOps agent pool name",
-                  "required": true,
-                  "default": "Default",
-                  "placeholder": "Default",
+                  "description": "Leave empty for auto-detection based on ADO Project, or manually select to override",
+                  "required": false,
+                  "placeholder": "Auto-detected from ADO Project",
+                  "options": [
+                    {"value": "", "label": "Auto-detect from ADO Project"},
+                    {"value": "vmss-pr-eastus2-ado-cmp", "label": "CMP Pool (vmss-pr-eastus2-ado-cmp)"},
+                    {"value": "vmss-pr-eastus2-ado-digital", "label": "Digital Pool (vmss-pr-eastus2-ado-digital)"},
+                    {"value": "Default", "label": "Default Pool"}
+                  ],
                   "helpUrl": "https://docs.ops-box.io/ado/agent-pools"
                 }
               ]
@@ -146,6 +156,11 @@ metadata:
               "dev": "aks-np-eastus-cmp-admin",
               "prod": "aks-prd-eastus2-cmp-admin"
             }
+          },
+          "ado_agent_pool_presets": {
+            "CMP": "vmss-pr-eastus2-ado-cmp",
+            "Digital": "vmss-pr-eastus2-ado-cmp",
+            "default": "Default"
           }
         }
       }
@@ -299,11 +314,13 @@ metadata:
         },
         {
           "name": "ADO_AGENT_POOL",
-          "scope": "global",
+          "scope": "lookup",
+          "lookupTable": "ado_agent_pool_presets",
+          "lookupKey": "{{ADO_PROJECT}}",
+          "default": "Default",
           "wizardRef": "adoAgentPool",
-          "comment": "Seeded by BFF from wizard",
-          "crField": "spec.adoAgentPool",
-          "default": "Default"
+          "comment": "Derived from ADO project using lookup table, can be overridden via wizard",
+          "crField": "spec.adoAgentPool"
         },
         {
           "name": "ACR_VARIABLE_GROUP",
