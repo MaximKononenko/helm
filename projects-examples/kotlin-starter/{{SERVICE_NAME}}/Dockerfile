@@ -2,31 +2,9 @@
 # Kotlin Microservice Dockerfile
 # Project: {{PROJECT_NAME}}
 # ============================================
-# Multi-stage build for optimized production image
+# Single-stage production image
+# Build happens in ADO workspace, this expects pre-built artifacts
 
-# === BUILD STAGE ===
-FROM eclipse-temurin:{{JAVA_VERSION}}-jdk-alpine AS builder
-
-WORKDIR /app
-
-# Copy Gradle wrapper and build files
-COPY gradlew .
-COPY gradle gradle
-COPY build.gradle.kts .
-COPY settings.gradle.kts .
-COPY gradle.properties .
-
-# Download dependencies (cached layer)
-RUN ./gradlew dependencies --no-daemon
-
-# Copy source code
-COPY src ./src
-COPY detekt.yml .
-
-# Build the shadow JAR
-RUN ./gradlew shadowJar --no-daemon
-
-# === PRODUCTION STAGE ===
 FROM eclipse-temurin:{{JAVA_VERSION}}-jre-alpine AS production
 
 # Create non-root user for security
@@ -35,8 +13,9 @@ RUN addgroup -g 1001 -S kotlin \
 
 WORKDIR /app
 
-# Copy the built JAR
-COPY --from=builder /app/build/libs/{{PROJECT_NAME}}-all.jar ./app.jar
+# Copy pre-built shadow JAR from artifactsPath (built by Gradle in ADO)
+# Expects: build/libs/*-all.jar from Gradle shadowJar task
+COPY build/libs/*-all.jar ./app.jar
 
 # Change ownership to non-root user
 RUN chown -R kotlin:kotlin /app

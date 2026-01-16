@@ -2,31 +2,9 @@
 # Spring Boot Microservice Dockerfile
 # Project: {{PROJECT_NAME}}
 # ============================================
-# Multi-stage build with layered JARs for optimized caching
+# Single-stage production image
+# Build happens in ADO workspace, this expects pre-built artifacts
 
-# === BUILD STAGE ===
-FROM eclipse-temurin:{{JAVA_VERSION}}-jdk-alpine AS builder
-
-WORKDIR /app
-
-# Copy Maven wrapper and pom.xml
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
-
-# Download dependencies (cached layer)
-RUN ./mvnw dependency:go-offline -B
-
-# Copy source code
-COPY src ./src
-
-# Build the application
-RUN ./mvnw clean package -DskipTests
-
-# Extract layers for optimized Docker caching
-RUN java -Djarmode=layertools -jar target/*.jar extract
-
-# === PRODUCTION STAGE ===
 FROM eclipse-temurin:{{JAVA_VERSION}}-jre-alpine AS production
 
 # Create non-root user for security
@@ -35,11 +13,9 @@ RUN addgroup -g 1001 -S spring \
 
 WORKDIR /app
 
-# Copy layers in order of change frequency (least to most)
-COPY --from=builder /app/dependencies/ ./
-COPY --from=builder /app/spring-boot-loader/ ./
-COPY --from=builder /app/snapshot-dependencies/ ./
-COPY --from=builder /app/application/ ./
+# Copy pre-built JAR from artifactsPath (built by Maven in ADO)
+# Expects: target/*.jar from Maven build
+COPY target/*.jar ./app.jar
 
 # Change ownership to non-root user
 RUN chown -R spring:spring /app

@@ -208,6 +208,18 @@ metadata:
           "default": "ACR Catalina"
         },
         {
+          "name": "NODE_VERSION",
+          "scope": "global",
+          "resolveFrom": "constant",
+          "default": "18"
+        },
+        {
+          "name": "PYTHON_VERSION",
+          "scope": "global",
+          "resolveFrom": "constant",
+          "default": "3.12"
+        },
+        {
           "name": "OB_SERVICES",
           "scope": "global",
           "resolveFrom": "gitdefinition.ops-box.io/v1.{{SOURCE_GIT_DEFINITION}}.spec.purposes.source.services"
@@ -245,8 +257,9 @@ metadata:
           "default": "",
           "languageDefaults": {
             "python": "",
-            "nodejs": "npm ci && npm run build --if-present && npm prune --production",
-            "java": "mvn clean package -DskipTests -T 1C -Duser.timezone=UTC"
+            "nodejs": "npm install && npm run build --if-present && npm prune --production",
+            "java": "mvn clean package -DskipTests -T 1C -Duser.timezone=UTC",
+            "kotlin": "./gradlew clean build -x test --no-daemon"
           }
         },
         {
@@ -255,6 +268,14 @@ metadata:
           "resolveFrom": "self.placeholders.OB_SERVICES",
           "iterateOver": "testCommand",
           "default": ""
+        },
+        {
+          "name": "OB_SERVICE_ARTIFACTS_PATH",
+          "scope": "per-item",
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "artifactsPath",
+          "default": "",
+          "comment": "Artifacts output path for Option 2 CI pattern (Java/Maven). Used as Docker context after build."
         },
         {
           "name": "OB_SERVICE_PORT",

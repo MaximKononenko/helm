@@ -7,6 +7,8 @@ variables:
     value: "{{OB_SERVICE_DOCKERFILE}}"
   - name: context
     value: "{{OB_SERVICE_CONTEXT}}"
+  - name: artifactsPath
+    value: "{{OB_SERVICE_ARTIFACTS_PATH}}"
   - name: buildCommand
     value: "{{OB_SERVICE_BUILD_COMMAND}}"
   - name: testCommand
@@ -30,11 +32,21 @@ steps:
         buildTag="$(echo $(basename $(Build.SourceBranch)).$(build.buildId) | tr '[:upper:]' '[:lower:]')"
         echo "##vso[task.setvariable variable=buildTag;isOutput=true]$buildTag"
 
-        imageTag="$(containerRegistryFullName)/$(projectName)/$(serviceName):$buildTag"
+        serviceNameLower="$(echo $(serviceName) | tr '[:upper:]' '[:lower:]')"
+        imageTag="$(containerRegistryFullName)/$(projectName)/$serviceNameLower:$buildTag"
         echo "##vso[task.setvariable variable=imageTag;isOutput=false]$imageTag"
 
-        context="$(context)"
-        echo "##vso[task.setvariable variable=context;isOutput=false]$context"
+        # Extract service root directory (remove /src suffix if present)
+        serviceRoot="$(echo $(context) | sed 's#/src$##')"
+        echo "##vso[task.setvariable variable=serviceRoot;isOutput=false]$serviceRoot"
+
+        # Use artifactsPath as Kaniko context, default to serviceRoot/target if empty
+        if [ -z "$(artifactsPath)" ]; then
+          kanikoContext="$serviceRoot/target"
+        else
+          kanikoContext="$(artifactsPath)"
+        fi
+        echo "##vso[task.setvariable variable=kanikoContext;isOutput=false]$kanikoContext"
 
         echo "=== Build Variables (Java/Maven) ==="
         echo "service: $service"
@@ -42,31 +54,35 @@ steps:
         echo "dockerFile: $dockerFile"
         echo "buildTag: $buildTag"
         echo "imageTag: $imageTag"
-        echo "context: $context"
+        echo "context: $(context)"
+        echo "artifactsPath: $(artifactsPath)"
+        echo "kanikoContext: $kanikoContext"
   - task: Bash@3
     displayName: Custom Build Command
     condition: ne(variables['buildCommand'], '')
     inputs:
       targetType: inline
-      workingDirectory: $(Build.SourcesDirectory)/$(context)
+      workingDirectory: $(Build.SourcesDirectory)/$(serviceRoot)
       script: |
         echo "Running custom build command for $(serviceName)"
+        echo "Build output will be stored in: $(kanikoContext)"
         $(buildCommand)
   - task: Bash@3
     displayName: Maven Build & Package (Default)
     condition: eq(variables['buildCommand'], '')
     inputs:
       targetType: inline
-      workingDirectory: $(Build.SourcesDirectory)/$(context)
+      workingDirectory: $(Build.SourcesDirectory)/$(serviceRoot)
       script: |
         echo "Building Java/Maven service: $(serviceName)"
+        echo "Build output will be stored in: $(kanikoContext)"
         mvn clean package -DskipTests -T 1C -Duser.timezone=UTC
   - task: Bash@3
     displayName: Custom Test Command
     condition: ne(variables['testCommand'], '')
     inputs:
       targetType: inline
-      workingDirectory: $(Build.SourcesDirectory)/$(context)
+      workingDirectory: $(Build.SourcesDirectory)/$(serviceRoot)
       script: |
         echo "Running custom test command for $(serviceName)"
         $(testCommand)
@@ -75,7 +91,7 @@ steps:
     condition: and(eq(variables['testCommand'], ''), eq(variables['buildCommand'], ''))
     inputs:
       targetType: inline
-      workingDirectory: $(Build.SourcesDirectory)/$(context)
+      workingDirectory: $(Build.SourcesDirectory)/$(serviceRoot)
       script: |
         echo "Running tests for Java/Maven service: $(serviceName)"
         mvn test -T 1C -Duser.timezone=UTC
@@ -97,11 +113,12 @@ steps:
         docker pull $(containerRegistryFullName)/kaniko/executor:latest
 
         echo "Starting Kaniko build with Dockerfile: $(dockerFile)"
+        echo "Kaniko context (artifacts): $(kanikoContext)"
         docker run --rm \
           -v $(Pipeline.Workspace)/s:/workspace \
           -v $(Pipeline.Workspace)/.kaniko-docker:/kaniko/.docker \
           $(containerRegistryFullName)/kaniko/executor:v1.23.1 \
-          --context=$(context) \
+          --context=$(kanikoContext) \
           --dockerfile=$(dockerFile) \
           --destination=$(imageTag)
     name: kanikoOutput
