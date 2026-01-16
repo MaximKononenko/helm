@@ -5,7 +5,7 @@
 # Multi-stage build for optimized production image
 
 # === BUILD STAGE ===
-FROM node:{{NODE_VERSION}}-alpine AS builder
+FROM catalina.azurecr.io/node:{{NODE_VERSION}}-alpine AS builder
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ RUN npm run lint || true
 RUN npm test || true
 
 # === PRODUCTION STAGE ===
-FROM node:{{NODE_VERSION}}-alpine AS production
+FROM catalina.azurecr.io/node:{{NODE_VERSION}}-alpine AS production
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs \

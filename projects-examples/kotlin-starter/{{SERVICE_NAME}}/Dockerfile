@@ -5,7 +5,7 @@
 # Single-stage production image
 # Build happens in ADO workspace, this expects pre-built artifacts
 
-FROM eclipse-temurin:{{JAVA_VERSION}}-jre-alpine AS production
+FROM catalina.azurecr.io/eclipse-temurin:{{JAVA_VERSION}}-jre-alpine AS production
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S kotlin \

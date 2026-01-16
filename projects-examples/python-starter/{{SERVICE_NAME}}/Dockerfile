@@ -5,7 +5,7 @@
 # Stage 2: Production image
 
 # Build stage
-FROM python:{{PYTHON_VERSION}}-slim as builder
+FROM catalina.azurecr.io/python:{{PYTHON_VERSION}}-slim as builder
 
 WORKDIR /build
 
@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Production stage
-FROM python:{{PYTHON_VERSION}}-slim as production
+FROM catalina.azurecr.io/python:{{PYTHON_VERSION}}-slim as production
 
 # Labels
 LABEL maintainer="{{OWNER}}"
