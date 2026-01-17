@@ -36,17 +36,9 @@ steps:
         imageTag="$(containerRegistryFullName)/$(projectName)/$serviceNameLower:$buildTag"
         echo "##vso[task.setvariable variable=imageTag;isOutput=false]$imageTag"
 
-        # Extract service root directory (remove /src suffix if present)
-        serviceRoot="$(echo $(context) | sed 's#/src$##')"
-        echo "##vso[task.setvariable variable=serviceRoot;isOutput=false]$serviceRoot"
-
-        # Use artifactsPath as Kaniko context, default to serviceRoot/build/libs if empty
-        if [ -z "$(artifactsPath)" ]; then
-          kanikoContext="$serviceRoot/build/libs"
-        else
-          kanikoContext="$(artifactsPath)"
-        fi
-        echo "##vso[task.setvariable variable=kanikoContext;isOutput=false]$kanikoContext"
+        # Strip /src suffix from context for Kaniko (serviceSrcPath is kotlin/src, but context should be kotlin)
+        context="$(echo $(context) | sed 's#/src$##')"
+        echo "##vso[task.setvariable variable=context;isOutput=false]$context"
 
         echo "=== Build Variables (Kotlin/Gradle) ==="
         echo "service: $service"
@@ -54,28 +46,25 @@ steps:
         echo "dockerFile: $dockerFile"
         echo "buildTag: $buildTag"
         echo "imageTag: $imageTag"
-        echo "context: $(context)"
+        echo "context (adjusted): $context"
         echo "artifactsPath: $(artifactsPath)"
-        echo "kanikoContext: $kanikoContext"
   - task: Bash@3
     displayName: Custom Build Command
     condition: ne(variables['buildCommand'], '')
     inputs:
       targetType: inline
-      workingDirectory: $(Build.SourcesDirectory)/$(serviceRoot)
+      workingDirectory: $(Build.SourcesDirectory)/$(context)
       script: |
         echo "Running custom build command for $(serviceName)"
-        echo "Build output will be stored in: $(kanikoContext)"
         $(buildCommand)
   - task: Bash@3
     displayName: Gradle Build & Package (Default)
     condition: eq(variables['buildCommand'], '')
     inputs:
       targetType: inline
-      workingDirectory: $(Build.SourcesDirectory)/$(serviceRoot)
+      workingDirectory: $(Build.SourcesDirectory)/$(context)
       script: |
         echo "Building Kotlin/Gradle service: $(serviceName)"
-        echo "Build output will be stored in: $(kanikoContext)"
         chmod +x gradlew
         ./gradlew clean build -x test --no-daemon
   - task: Bash@3
@@ -83,7 +72,7 @@ steps:
     condition: ne(variables['testCommand'], '')
     inputs:
       targetType: inline
-      workingDirectory: $(Build.SourcesDirectory)/$(serviceRoot)
+      workingDirectory: $(Build.SourcesDirectory)/$(context)
       script: |
         echo "Running custom test command for $(serviceName)"
         $(testCommand)
@@ -92,7 +81,7 @@ steps:
     condition: and(eq(variables['testCommand'], ''), eq(variables['buildCommand'], ''))
     inputs:
       targetType: inline
-      workingDirectory: $(Build.SourcesDirectory)/$(serviceRoot)
+      workingDirectory: $(Build.SourcesDirectory)/$(context)
       script: |
         echo "Running Gradle tests for $(serviceName)"
         ./gradlew test --no-daemon
@@ -109,12 +98,12 @@ steps:
         docker pull $(containerRegistryFullName)/kaniko/executor:latest
 
         echo "Starting Kaniko build with Dockerfile: $(dockerFile)"
-        echo "Kaniko context (artifacts): $(kanikoContext)"
+        echo "Kaniko context: $(context)"
         docker run --rm \
           -v $(Pipeline.Workspace)/s:/workspace \
           -v $(Pipeline.Workspace)/.kaniko-docker:/kaniko/.docker \
           $(containerRegistryFullName)/kaniko/executor:v1.23.1 \
-          --context=$(kanikoContext) \
+          --context=$(context) \
           --dockerfile=$(dockerFile) \
           --destination=$(imageTag)
     name: kanikoOutput

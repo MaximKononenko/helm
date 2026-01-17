@@ -2,36 +2,29 @@
 # Spring Boot Microservice Dockerfile
 # Project: {{PROJECT_NAME}}
 # ============================================
-# Single-stage production image
-# Build happens in ADO workspace, this expects pre-built artifacts
+# Production image - expects pre-built artifacts from Maven build in ADO pipeline
 
-FROM catalina.azurecr.io/eclipse-temurin:{{JAVA_VERSION}}-jre-alpine AS production
+ARG BASE_IMAGE_NAME=java:17-jdk
+ARG REGISTRY=catalina.azurecr.io
+FROM $REGISTRY/$BASE_IMAGE_NAME
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S spring \
-    && adduser -S spring -u 1001 -G spring
+ARG JAVA_ARTIFACT_EXTENSION
+ENV JAVA_ARTIFACT_NAME={{SERVICE_NAME}} \
+    JAVA_ARTIFACT_EXTENSION=${JAVA_ARTIFACT_EXTENSION:-jar}
 
-WORKDIR /app
+# Datadog agent installation (required for APM)
+RUN curl -L -o dd-java-agent.jar https://dtdg.co/latest-java-tracer
 
-# Copy pre-built JAR from artifactsPath (built by Maven in ADO)
-# Expects: target/*.jar from Maven build
-COPY target/*.jar ./app.jar
-
-# Change ownership to non-root user
-RUN chown -R spring:spring /app
-
-# Switch to non-root user
-USER spring
+# Copy pre-built JAR from Maven build (expects target/*.jar)
+USER root
+COPY --chown=catalina:catalina target/*.jar ${CONTAINER_WORKDIR}/app.jar
+USER catalina
 
 # Expose port
 EXPOSE {{PORT}}
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-    CMD wget -q --spider http://localhost:{{PORT}}/actuator/health || exit 1
-
 # JVM options for containers
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -Djava.security.egd=file:/dev/./urandom"
 
-# Start application
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS org.springframework.boot.loader.launch.JarLauncher"]
+# Start application (catalina base image provides CONTAINER_WORKDIR)
+CMD ["sh", "-c", "java $JAVA_OPTS -jar ${CONTAINER_WORKDIR}/app.jar"]

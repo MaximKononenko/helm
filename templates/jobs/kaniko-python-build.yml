@@ -30,13 +30,17 @@ steps:
         imageTag="$(containerRegistryFullName)/$(projectName)/$serviceNameLower:$buildTag"
         echo "##vso[task.setvariable variable=imageTag;isOutput=false]$imageTag"
 
+        # Strip /src suffix from context for Kaniko (serviceSrcPath is python/src, but context should be python)
+        context="$(echo $(context) | sed 's#/src$##')"
+        echo "##vso[task.setvariable variable=context;isOutput=false]$context"
+
         echo "=== Build Variables ==="
         echo "service: $service"
         echo "acrRepoName: $acrRepoName"
         echo "dockerFile: $dockerFile"
         echo "buildTag: $buildTag"
         echo "imageTag: $imageTag"
-        echo "context (Kaniko context): $(context)"
+        echo "context (adjusted): $context"
   - task: Bash@3
     displayName: Kaniko Build & Push
     inputs:

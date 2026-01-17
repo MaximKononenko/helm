@@ -1,5 +1,9 @@
 job: deploy_{{OB_SERVICE_NAME}}
 displayName: Deploy {{OB_SERVICE_NAME}} with Timoni
+container:
+  image: catalina.azurecr.io/ops-box/timoni-cd:latest
+  endpoint: Catalina ACR
+  options: --user root
 variables:
   - name: serviceName
     value: "{{OB_SERVICE_NAME}}"
