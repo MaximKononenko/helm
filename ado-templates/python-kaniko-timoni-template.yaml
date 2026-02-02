@@ -125,6 +125,104 @@ metadata:
                   "default": "devops-tools:latest",
                   "placeholder": "devops-tools:latest",
                   "helpUrl": "https://docs.ops-box.io/deployment/containers"
+                },
+                {
+                  "fieldId": "deploymentType",
+                  "type": "select",
+                  "displayName": "Deployment Type",
+                  "description": "Deployment mechanism for the service",
+                  "required": true,
+                  "options": [
+                    {"value": "none", "label": "None (Build only)"},
+                    {"value": "argocd", "label": "ArgoCD"},
+                    {"value": "timoni", "label": "Timoni"},
+                    {"value": "timoni-argocd", "label": "Timoni + ArgoCD"},
+                    {"value": "helm", "label": "Helm"}
+                  ],
+                  "default": "timoni"
+                },
+                {
+                  "fieldId": "timoniBundle",
+                  "type": "select",
+                  "displayName": "Timoni Bundle",
+                  "description": "Timoni bundle template for deployment",
+                  "required": false,
+                  "requiredIf": [
+                    {"deploymentType": "timoni"},
+                    {"deploymentType": "timoni-argocd"}
+                  ],
+                  "showOn": [
+                    {"deploymentType": "timoni"},
+                    {"deploymentType": "timoni-argocd"}
+                  ],
+                  "source": "pipelineTemplate",
+                  "annotationPath": "ops-box.io/deployment-artifacts-templates",
+                  "keysPath": "bundleDefinitionKeys",
+                  "default": "deployment"
+                }
+              ]
+            },
+            "triggers": {
+              "title": "Pipeline Triggers",
+              "description": "Configure when pipeline runs automatically",
+              "fields": [
+                {
+                  "fieldId": "triggerMode",
+                  "type": "radio",
+                  "displayName": "Trigger Mode",
+                  "description": "How pipeline triggers are configured",
+                  "required": true,
+                  "default": "auto",
+                  "options": [
+                    {
+                      "value": "auto",
+                      "label": "Auto-generate from Deployment Strategy",
+                      "description": "Automatically extract branch/tag patterns from deployment conditions"
+                    },
+                    {
+                      "value": "custom",
+                      "label": "Custom Triggers",
+                      "description": "Define custom branch/tag patterns"
+                    },
+                    {
+                      "value": "none",
+                      "label": "Manual Only",
+                      "description": "Pipeline runs only when manually triggered"
+                    }
+                  ]
+                },
+                {
+                  "fieldId": "customBranches",
+                  "type": "string-array",
+                  "displayName": "Branch Triggers",
+                  "description": "Branch patterns that trigger the pipeline",
+                  "required": false,
+                  "showOn": [{"triggerMode": "custom"}],
+                  "placeholder": "main, develop, feature/*",
+                  "default": ["main", "develop"],
+                  "help": "Examples: main, develop, feature/*, release/*"
+                },
+                {
+                  "fieldId": "customTags",
+                  "type": "string-array",
+                  "displayName": "Tag Triggers",
+                  "description": "Tag patterns that trigger the pipeline",
+                  "required": false,
+                  "showOn": [{"triggerMode": "custom"}],
+                  "placeholder": "v*, release_*",
+                  "help": "Examples: v*, release_*, hotfix_*"
+                },
+                {
+                  "fieldId": "enablePrTriggers",
+                  "type": "checkbox",
+                  "displayName": "Enable PR Validation",
+                  "description": "Run pipeline for pull requests",
+                  "required": false,
+                  "default": false,
+                  "showOn": [
+                    {"triggerMode": "auto"},
+                    {"triggerMode": "custom"}
+                  ]
                 }
               ]
             },
@@ -143,146 +241,101 @@ metadata:
                 }
               ]
             }
-          },
-          "deployment_strategy_presets": {
-            "CMP": {
-              "dev": "aks-np-eastus-cmp-admin",
-              "prod": "aks-prd-eastus2-cmp-admin"
-            },
-            "Digital": {
-              "dev": "aks-dev-westeurope-digital",
-              "prod": "aks-prd-westeurope-digital"
-            },
-            "default": {
-              "dev": "aks-np-eastus-cmp-admin",
-              "prod": "aks-prd-eastus2-cmp-admin"
-            }
-          },
-          "ado_agent_pool_presets": {
-            "CMP": "vmss-pr-eastus2-ado-cmp",
-            "Digital": "vmss-pr-eastus2-ado-cmp",
-            "default": "Default"
           }
-        }
-      }
-    # Deployment Artifacts Templates (V2 refactoring - structured annotation)
-    # Single source of truth for all deployment artifact templates
-    # Structure mirrors deploymentArtifacts spec for consistency
-    # BFF discovers available templates from this annotation automatically
-    ops-box.io/deployment-artifacts-templates: |
-      timoniBundles:
-        deployment:
-          label: "Standard Deployment"
-          description: "Stateless Python microservice"
-          timoniModule: "oci://catalina.azurecr.io/classic-deployment:0.2.3"
-          template: |
-            // Timoni Bundle for {{PROJECT_NAME}}
-            // Generated by ops-box self-service wizard
-
-            runtime: {
-              name: string
-            }
-
-            global: {
-              image: {
-                tag: *"latest" | string
+        },
+        "placeholderMappings": {
+          "global": {
+            "aks_clusters_mappings": {
+              "CMP": {
+                "dev": "aks-np-eastus-cmp-admin",
+                "prod": "aks-prd-eastus2-cmp-admin"
+              },
+              "Digital": {
+                "dev": "aks-dev-westeurope-digital",
+                "prod": "aks-prd-westeurope-digital"
+              },
+              "default": {
+                "dev": "aks-np-eastus-cmp-admin",
+                "prod": "aks-prd-eastus2-cmp-admin"
               }
-            }
-
-            bundle: {
-              apiVersion: "v1alpha1"
-              name:       "{{PROJECT_NAME}}-{{OB_SERVICE_NAME}}"
-              instances: {
-                "{{PROJECT_NAME}}-{{OB_SERVICE_NAME}}": {
-                  module: {
-                    url:     "oci://catalina.azurecr.io/classic-deployment"
-                    version: "0.2.3"
+            },
+            "ado_agent_pool_presets": {
+              "CMP": "vmss-pr-eastus2-ado-cmp",
+              "Digital": "vmss-pr-eastus2-ado-cmp",
+              "default": "Default"
+            },
+            "service_principal_mappings": {
+              "CMP": {
+                "dev": "Azure-ServiceConnection-CMP-Dev",
+                "stg": "Azure-ServiceConnection-CMP-Stg",
+                "prod": "Azure-ServiceConnection-CMP-Prod"
+              },
+              "Digital": {
+                "dev": "Azure-ServiceConnection-Digital-Dev",
+                "prod": "Azure-ServiceConnection-Digital-Prod"
+              }
+            },
+            "keyvault_mappings": {
+              "2eddc39c-2996-4c2a-ab97-f767c39ea155": {
+                "CMP": {
+                  "dev": {
+                    "kv-cmp-dev-eastus": {
+                      "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f11"
+                    }
+                  },
+                  "prod": {
+                    "kv-cmp-prod-eastus2": {
+                      "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f33"
+                    }
                   }
-                  namespace: "{{PROJECT_NAME}}-\(runtime.name)"
-                  values: {
-                    image: {
-                      repository: "{{CONTAINER_REGISTRY}}.azurecr.io/{{PROJECT_NAME}}/{{PROJECT_NAME}}"
-                      tag:        global.image.tag
-                      digest:     ""
-                      pullPolicy: "IfNotPresent"
+                },
+                "Digital": {
+                  "dev": {
+                    "kv-digital-dev-eastus": {
+                      "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f44"
                     }
-              
-                    // Environment-specific replicas
-                    replicas: *1 | int
-                    if runtime.name == "prd" {
-                      replicas: 2
+                  },
+                  "prod": {
+                    "kv-digital-prod-eastus2": {
+                      "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f55"
                     }
-              
-                    service: port: {{EXPOSURE_PORT}}
-                    containerPort: {{EXPOSURE_PORT}}
-                    probes: {
-                      liveness: {
-                        path: "/health"
-                        initialDelaySeconds: 10
-                        periodSeconds: 30
-                      }
-                      readiness: {
-                        path: "/health"
-                        initialDelaySeconds: 10
-                        periodSeconds: 30
-                      }
+                  }
+                },
+                "DeliveryEngineering": {
+                  "dev": {
+                    "kv-de-dev-eastus": {
+                      "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f66"
                     }
-                    env: {
-                      LOG_LEVEL: "INFO"
-                      PYTHON_VERSION: "{{PYTHON_VERSION}}"
-                    }
-              
-                    // Environment-specific resources
-                    resources: {
-                      if runtime.name == "prd" {
-                        requests: {
-                          cpu:    "200m"
-                          memory: "256Mi"
-                        }
-                        limits: {
-                          cpu:    "1000m"
-                          memory: "1Gi"
-                        }
-                      }
-                      if runtime.name != "prd" {
-                        requests: {
-                          cpu:    "{{OB_CPU_REQUEST}}"
-                          memory: "{{OB_MEMORY_REQUEST}}"
-                        }
-                        limits: {
-                          cpu:    "{{OB_CPU_LIMIT}}"
-                          memory: "{{OB_MEMORY_LIMIT}}"
-                        }
-                      }
-                    }
-              
-                    // Environment-specific ingress
-                    ingress: {
-                      enabled: false
-                      annotations: {
-                        "kubernetes.io/ingress.class": "nginx"
-                      }
-                      hosts: [
-                        {
-                          if runtime.name == "prd" {
-                            host: ""{{OB_SERVICE_NAME}}".catmktg.com"
-                          }
-                          if runtime.name != "prd" {
-                            host: "{{OB_SERVICE_NAME}}-\(runtime.name).catmktg.com"
-                          }
-                          paths: [
-                            {
-                              path:     "/"
-                              pathType: "Prefix"
-                            },
-                          ]
-                        },
-                      ]
+                  },
+                  "prod": {
+                    "kv-de-prod-eastus2": {
+                      "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f77"
                     }
                   }
                 }
               }
             }
+          }
+        }
+      }
+    
+    # Deployment Artifacts Templates (references ConfigMaps only)
+    ops-box.io/deployment-artifacts-templates: |
+      configMapRefs:
+        - name: deployment-artifacts-common
+          namespace: ops-box
+          keys:
+            bundleDefinitionKeys: [deployment, deployment-kv, nginx]
+            argoDefinitionKeys: [timoni-rendered, helm-chart]
+    
+    # Deployment strategy references for conditional deploy stages
+    ops-box.io/deployment-strategy-templates: |
+      configMapRefs:
+        - name: deployment-strategy-templates
+          namespace: ops-box
+          keys:
+            strategyKeys: [single-env, classic2, classic3]
+    
     ops-box.io/placeholders: |
       [
         {
@@ -317,7 +370,7 @@ metadata:
           "name": "ADO_AGENT_POOL",
           "scope": "lookup",
           "lookupTable": "ado_agent_pool_presets",
-          "lookupKey": "{{ADO_PROJECT}}",
+          "lookupPath": "{{ADO_PROJECT}}",
           "default": "Default",
           "wizardRef": "adoAgentPool",
           "comment": "Derived from ADO project using lookup table, can be overridden via wizard",
@@ -447,16 +500,27 @@ metadata:
         {
           "name": "CLUSTER_DEV",
           "scope": "lookup",
-          "lookupTable": "deployment_strategy_presets",
-          "lookupKey": "{{ADO_PROJECT}}",
-          "lookupField": "dev"
+          "lookupTable": "aks_clusters_mappings",
+          "resolveLookupPath": [
+            {"resolveFrom": "{{ADO_PROJECT}}"},
+            {"static": "dev"}
+          ]
         },
         {
           "name": "CLUSTER_PROD",
           "scope": "lookup",
-          "lookupTable": "deployment_strategy_presets",
-          "lookupKey": "{{ADO_PROJECT}}",
-          "lookupField": "prod"
+          "lookupTable": "aks_clusters_mappings",
+          "resolveLookupPath": [
+            {"resolveFrom": "{{ADO_PROJECT}}"},
+            {"static": "prod"}
+          ]
+        },
+        {
+          "name": "DEPLOY_CONTAINER_IMAGE",
+          "scope": "global",
+          "resolveFrom": "constant",
+          "default": "devops-tools:latest",
+          "comment": "Container image for deployment jobs"
         }
       ]
 spec:
