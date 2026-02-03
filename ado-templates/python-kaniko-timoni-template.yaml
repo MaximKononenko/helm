@@ -247,16 +247,17 @@ metadata:
           "global": {
             "aks_clusters_mappings": {
               "CMP": {
-                "dev": "aks-np-eastus-cmp-admin",
-                "prod": "aks-prd-eastus2-cmp-admin"
+                "dev": "aks-np-eastus-cmp",
+                "stg": "aks-np-eastus-cmp",
+                "prod": "aks-prd-eastus2-cmp"
               },
               "Digital": {
                 "dev": "aks-dev-westeurope-digital",
                 "prod": "aks-prd-westeurope-digital"
               },
               "default": {
-                "dev": "aks-np-eastus-cmp-admin",
-                "prod": "aks-prd-eastus2-cmp-admin"
+                "dev": "aks-np-eastus-cmp",
+                "prod": "aks-prd-eastus2-cmp"
               }
             },
             "ado_agent_pool_presets": {
@@ -276,41 +277,58 @@ metadata:
               }
             },
             "keyvault_mappings": {
-              "2eddc39c-2996-4c2a-ab97-f767c39ea155": {
-                "CMP": {
-                  "dev": {
-                    "kv-cmp-dev-eastus": {
-                      "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f11"
-                    }
-                  },
-                  "prod": {
-                    "kv-cmp-prod-eastus2": {
-                      "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f33"
-                    }
+              "CMP": {
+                "dev": {
+                  "kv-cmp-dev-eastus": {
+                    "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
+                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f11"
                   }
                 },
-                "Digital": {
-                  "dev": {
-                    "kv-digital-dev-eastus": {
-                      "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f44"
-                    }
-                  },
-                  "prod": {
-                    "kv-digital-prod-eastus2": {
-                      "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f55"
-                    }
+                "stg": {
+                  "kv-cmp-dev-eastus": {
+                    "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
+                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f11"
                   }
                 },
-                "DeliveryEngineering": {
-                  "dev": {
-                    "kv-de-dev-eastus": {
-                      "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f66"
-                    }
-                  },
-                  "prod": {
-                    "kv-de-prod-eastus2": {
-                      "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f77"
-                    }
+                "prod": {
+                  "kv-cmp-prod-eastus2": {
+                    "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
+                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f33"
+                  }
+                }
+              },
+              "Digital": {
+                "dev": {
+                  "kv-digital-dev-eastus": {
+                    "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
+                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f44"
+                  }
+                },
+                "prod": {
+                  "kv-digital-prod-eastus2": {
+                    "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
+                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f55"
+                  }
+                }
+              },
+              "DeliveryEngineering": {
+                "dev": {
+                  "kv-de-dev-eastus": {
+                    "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
+                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f66"
+                  }
+                },
+                "prod": {
+                  "kv-de-prod-eastus2": {
+                    "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
+                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f77"
                   }
                 }
               }
@@ -318,7 +336,6 @@ metadata:
           }
         }
       }
-    
     # Deployment Artifacts Templates (references ConfigMaps only)
     ops-box.io/deployment-artifacts-templates: |
       configMapRefs:
@@ -327,7 +344,6 @@ metadata:
           keys:
             bundleDefinitionKeys: [deployment, deployment-kv, nginx]
             argoDefinitionKeys: [timoni-rendered, helm-chart]
-    
     # Deployment strategy references for conditional deploy stages
     ops-box.io/deployment-strategy-templates: |
       configMapRefs:
@@ -335,7 +351,6 @@ metadata:
           namespace: ops-box
           keys:
             strategyKeys: [single-env, classic2, classic3]
-    
     ops-box.io/placeholders: |
       [
         {
@@ -438,6 +453,14 @@ metadata:
           "default": "8080"
         },
         {
+          "name": "OB_CONTAINER_PORT",
+          "scope": "per-item",
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "port",
+          "default": "8080",
+          "comment": "Container port (alias for OB_SERVICE_PORT for Timoni bundles)"
+        },
+        {
           "name": "OB_HEALTH_PATH",
           "scope": "per-item",
           "resolveFrom": "self.placeholders.OB_SERVICES",
@@ -521,6 +544,38 @@ metadata:
           "resolveFrom": "constant",
           "default": "devops-tools:latest",
           "comment": "Container image for deployment jobs"
+        },
+        {
+          "name": "KV_ENVIRONMENTS",
+          "scope": "per-item",
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "keyVaults",
+          "transformType": "kv_environments_to_metadata",
+          "comment": "Extracts KeyVault metadata per environment with complete Azure details (uses first KeyVault if multiple)"
+        },
+        {
+          "name": "KV_OBJECTS",
+          "scope": "per-item",
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "keyVaults",
+          "transformType": "kv_secrets_to_objects",
+          "comment": "Extracts secrets from KeyVault and transforms to CUE objects array"
+        },
+        {
+          "name": "KV_SECRET_MAPPINGS",
+          "scope": "per-item",
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "keyVaults",
+          "transformType": "kv_secrets_to_mappings",
+          "comment": "Extracts secrets from KeyVault and transforms to CUE secret mappings"
+        },
+        {
+          "name": "KV_ENV_FROM_SECRETS",
+          "scope": "per-item",
+          "resolveFrom": "self.placeholders.OB_SERVICES",
+          "iterateOver": "keyVaults",
+          "transformType": "kv_env_from_secrets",
+          "comment": "Transforms secrets to envFromSecrets CUE structure for mounting as environment variables"
         }
       ]
 spec:
@@ -543,12 +598,16 @@ spec:
   pipelineDefinition:
     name: $(Build.SourceBranchName).$(Build.BuildId)
     pool: "{{ADO_AGENT_POOL}}"
-    trigger:
-      batch: true
-      branches:
-        include:
-          - main
-          - develop
+    # trigger: REMOVED - dynamically generated by PipelineConstructor from spec.triggers
+    # PipelineConstructor reads spec.triggers and generates appropriate trigger section based on:
+    # - triggerMode: "auto" (extract from deployment strategy), "custom" (use customBranches/Tags), "none" (manual only)
+    # - customBranches: ["main", "develop"] (when triggerMode=custom)
+    # - customTags: ["v*", "release-*"] (when triggerMode=custom)
+    # - enablePrTriggers: true/false
+    parameters:
+      - name: services
+        type: object
+        default: []
     variables:
       - group: devops-credentials
       - group: "{{ACR_VARIABLE_GROUP}}"
@@ -564,6 +623,7 @@ spec:
         jobs:
           - baseTemplate: templates/jobs/kaniko-python-build.yml
             job: template
+            jobId: Build_{{SERVICE_NAME}}_service
       - stage: Deploy
         displayName: CD
         dependsOn: Build
@@ -602,8 +662,6 @@ spec:
                       else
                         K8S_CONTEXT="{{CLUSTER_PROD}}"
                       fi
-                    else
-                      K8S_CONTEXT="{{CLUSTER_DEFAULT}}"
                     fi
                     echo "##vso[task.setvariable variable=ENVIRONMENT]$ENVIRONMENT"
                     echo "##vso[task.setvariable variable=K8S_CONTEXT]$K8S_CONTEXT"
