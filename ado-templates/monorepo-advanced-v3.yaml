@@ -34,17 +34,33 @@ metadata:
           "java": "templates/jobs/kaniko-java-maven-build.yml",
           "nodejs": "templates/jobs/kaniko-nodejs-build.yml",
           "kotlin": "templates/jobs/kaniko-kotlin-gradle-build.yml"
-        },
+        }
+      }
+    ops-box.io/stage-templates: |
+      {
         "Deploy": {
-          "python": "templates/jobs/timoni-deploy.yml",
-          "java": "templates/jobs/timoni-deploy.yml",
-          "nodejs": "templates/jobs/timoni-deploy.yml",
-          "kotlin": "templates/jobs/timoni-deploy.yml"
+          "timoni-argocd": {
+            "default": "templates/stages/timoni-deploy.yml",
+            "approvals": "templates/stages/timoni-deploy-approvals.yml"
+          },
+          "timoni": {
+            "default": "templates/stages/timoni-deploy.yml",
+            "approvals": "templates/stages/timoni-deploy-approvals.yml"
+          },
+          "argocd": {
+            "default": "templates/stages/argocd-deploy.yml",
+            "approvals": "templates/stages/argocd-deploy-approvals.yml"
+          },
+          "helm": {
+            "default": "templates/stages/helm-deploy.yml",
+            "approvals": "templates/stages/helm-deploy-approvals.yml"
+          },
+          "none": ""
         }
       }
     # IMPORTANT: Awoid setting default value for "fieldId": "adoAgentPool" here to allow 
     # wizard override. It affects auto-detection logic for application self-service wizard.
-    # With emptu value it will auto-detect based on ADO project using lookup table. But you
+    # With empty value it will auto-detect based on ADO project using lookup table. But you
     # can still override it manually.
     ops-box.io/template-config: |
       {
@@ -355,37 +371,31 @@ metadata:
               "Digital": "vmss-pr-eastus2-ado-cmp",
               "default": "Default"
             },
-            "service_principal_mappings": {
-              "CMP": {
-                "dev": "Azure-ServiceConnection-CMP-Dev",
-                "stg": "Azure-ServiceConnection-CMP-Stg",
-                "prod": "Azure-ServiceConnection-CMP-Prod"
-              },
-              "Digital": {
-                "dev": "Azure-ServiceConnection-Digital-Dev",
-                "prod": "Azure-ServiceConnection-Digital-Prod"
-              }
-            },
             "keyvault_mappings": {
               "CMP": {
                 "dev": {
                   "kv-cmp-dev-eastus": {
                     "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
-                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "tenantId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
                     "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f11"
+                  },
+                  "kv-prd-eastus2-mngmnt": {
+                    "subscriptionId": "999f85a0-ee38-4445-87b5-8d7a5897fa4d",
+                    "tenantId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
+                    "managedIdentityId": "0145673c-eff1-4859-89b0-17f9b8963a69"
                   }
                 },
                 "stg": {
                   "kv-cmp-dev-eastus": {
                     "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
-                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "tenantId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
                     "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f11"
                   }
                 },
                 "prod": {
                   "kv-cmp-prod-eastus2": {
                     "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
-                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "tenantId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
                     "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f33"
                   }
                 }
@@ -394,14 +404,14 @@ metadata:
                 "dev": {
                   "kv-digital-dev-eastus": {
                     "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
-                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "tenantId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
                     "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f44"
                   }
                 },
                 "prod": {
                   "kv-digital-prod-eastus2": {
                     "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
-                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "tenantId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
                     "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f55"
                   }
                 }
@@ -410,14 +420,14 @@ metadata:
                 "dev": {
                   "kv-de-dev-eastus": {
                     "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
-                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "tenantId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
                     "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f66"
                   }
                 },
                 "prod": {
                   "kv-de-prod-eastus2": {
                     "subscriptionId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
-                    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                    "tenantId": "2eddc39c-2996-4c2a-ab97-f767c39ea155",
                     "managedIdentityId": "08896b7c-b7c9-43ed-852d-5812b3234f77"
                   }
                 }
@@ -596,7 +606,7 @@ metadata:
           "name": "CONTAINER_REGISTRY",
           "scope": "global",
           "resolveFrom": "constant",
-          "default": "Catalina ACR"
+          "default": "catalina"
         },
         {
           "name": "CONTAINER_REGISTRY_FULL_NAME",
@@ -627,6 +637,15 @@ metadata:
           "resolveLookupPath": [
             {"resolveFrom": "{{ADO_PROJECT}}"},
             {"static": "prod"}
+          ]
+        },
+        {
+          "name": "CLUSTER_STG",
+          "scope": "lookup",
+          "lookupTable": "aks_clusters_mappings",
+          "resolveLookupPath": [
+            {"resolveFrom": "{{ADO_PROJECT}}"},
+            {"static": "stg"}
           ]
         },
         {

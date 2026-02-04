@@ -1,0 +1,151 @@
+parameters:
+  - name: deployProfileList
+    type: object
+    default: []
+stages:
+  - ${{ each deployProfile in parameters.deployProfileList }}:
+      - stage: Deploy_${{ replace(replace(deployProfile.profile, '.', '_'), '-', '_') }}
+        displayName: Deploy ${{ deployProfile.profile }}
+        dependsOn: [Build]
+        jobs:
+          - job: timoniDeploy
+            displayName: Timoni Deploy
+            pool:
+              name: $(adoAgentPool)
+            steps:
+              - checkout: self
+                fetchDepth: 1
+                clean: true
+              - task: Bash@3
+                displayName: 'Prepare Timoni Bundle'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    echo "Preparing Timoni bundle for profile: ${{ deployProfile.profile }}"
+                    echo "Service: ${{ deployProfile.serviceName }}"
+
+                    # Set variables for downstream steps
+                    echo "##vso[task.setvariable variable=deployProfile]${{ deployProfile.profile }}"
+                    echo "##vso[task.setvariable variable=serviceName]${{ deployProfile.serviceName }}"
+              - task: AzureCLI@2
+                displayName: 'Deploy with Timoni to ArgoCD'
+                inputs:
+                  azureSubscription: ${{ deployProfile.servicePrincipal }}
+                  scriptType: 'bash'
+                  scriptLocation: 'inlineScript'
+                  inlineScript: |
+                    set -e
+
+                    echo "Deploying ${{ deployProfile.serviceName }} with profile ${{ deployProfile.profile }}"
+
+                    # Extract environment and cluster from profile
+                    # Profile format: {strategy}.{service}-{env} or {service}-{env}
+                    PROFILE="${{ deployProfile.profile }}"
+                    SERVICE="${{ deployProfile.serviceName }}"
+
+                    # Get environment from profile (last segment after -)
+                    ENV=$(echo "$PROFILE" | awk -F'-' '{print $NF}')
+
+                    # Determine cluster based on environment
+                    case "$ENV" in
+                      dev)
+                        CLUSTER="$(clusterDev)"
+                        ;;
+                      stg)
+                        CLUSTER="$(clusterStg)"
+                        ;;
+                      prod)
+                        CLUSTER="$(clusterProd)"
+                        ;;
+                      *)
+                        echo "Unknown environment: $ENV"
+                        exit 1
+                        ;;
+                    esac
+
+                    echo "Target cluster: $CLUSTER"
+                    echo "Environment: $ENV"
+
+                    # Get AKS credentials
+                    az aks get-credentials --resource-group "rg-$CLUSTER" --name "$CLUSTER" --overwrite-existing
+
+                    # Install/Update Timoni if needed
+                    if ! command -v timoni &> /dev/null; then
+                      echo "Installing Timoni..."
+                      curl -sSL https://timoni.sh/install.sh | bash
+                    fi
+
+                    # Navigate to Timoni bundle directory
+                    BUNDLE_PATH="timoni/$(projectName)/$CLUSTER/$SERVICE"
+                    if [ ! -d "$BUNDLE_PATH" ]; then
+                      echo "Error: Bundle path not found: $BUNDLE_PATH"
+                      exit 1
+                    fi
+
+                    cd "$BUNDLE_PATH"
+
+                    # Build Timoni bundle with environment-specific values
+                    VALUES_FILE="values-$SERVICE-$ENV.cue"
+                    if [ ! -f "$VALUES_FILE" ]; then
+                      echo "Warning: Values file not found: $VALUES_FILE, using defaults"
+                      VALUES_FILE=""
+                    fi
+
+                    # Render manifests
+                    echo "Rendering Timoni bundle..."
+                    MANIFEST_OUTPUT="manifests-$SERVICE-$ENV.yaml"
+
+                    if [ -n "$VALUES_FILE" ]; then
+                      timoni bundle build -f timoni.cue -f "$VALUES_FILE" > "$MANIFEST_OUTPUT"
+                    else
+                      timoni bundle build -f timoni.cue > "$MANIFEST_OUTPUT"
+                    fi
+
+                    # Create ArgoCD Application
+                    echo "Creating/Updating ArgoCD Application..."
+
+                    cat <<EOF | kubectl apply -f -
+                    apiVersion: argoproj.io/v1alpha1
+                    kind: Application
+                    metadata:
+                      name: $SERVICE-$ENV
+                      namespace: argocd
+                      finalizers:
+                        - resources-finalizer.argocd.argoproj.io
+                    spec:
+                      project: default
+                      source:
+                        repoURL: $(outputGitRepo)
+                        targetRevision: timoni-apps
+                        path: $BUNDLE_PATH
+                      destination:
+                        server: https://kubernetes.default.svc
+                        namespace: $SERVICE-$ENV
+                      syncPolicy:
+                        automated:
+                          prune: true
+                          selfHeal: false
+                        syncOptions:
+                          - CreateNamespace=true
+                    EOF
+
+                    echo "Deployment completed successfully"
+              - task: Bash@3
+                displayName: 'Verify Deployment'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    echo "Verifying deployment status..."
+
+                    SERVICE="${{ deployProfile.serviceName }}"
+                    PROFILE="${{ deployProfile.profile }}"
+                    ENV=$(echo "$PROFILE" | awk -F'-' '{print $NF}')
+
+                    # Wait for ArgoCD sync
+                    kubectl wait --for=condition=SyncStatusCode=Synced \
+                      application/$SERVICE-$ENV \
+                      -n argocd \
+                      --timeout=5m || true
+
+                    # Show sync status
+                    kubectl get application $SERVICE-$ENV -n argocd -o yaml

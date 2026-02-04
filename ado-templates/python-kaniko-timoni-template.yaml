@@ -629,10 +629,15 @@ spec:
         dependsOn: Build
         condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/release-'))
         variables:
-          buildTag: $[ stageDependencies.Build.kaniko_build.outputs['buildVars.buildTag'] ]
+          buildTag: $[ stageDependencies.Build.Build_{{SERVICE_NAME}}_service.outputs['buildVars.buildTag'] ]
         jobs:
           - job: deploy
             displayName: Deploy to Kubernetes
+            variables:
+              - name: serviceName
+                value: "{{SERVICE_NAME}}"
+              - name: projectName
+                value: "{{PROJECT_NAME}}"
             container:
               image: "{{DEPLOY_CONTAINER_IMAGE}}"
               endpoint: "{{CONTAINER_REGISTRY}}"
@@ -681,7 +686,7 @@ spec:
                       image:
                         tag: "$(buildTag)"
                     EOF
-                    timoni bundle apply -f timoni-bundle.cue -f runtime.yaml --kube-context $(K8S_CONTEXT)
+                    timoni bundle apply -f timoni-$(serviceName)-bundle.cue -f runtime.yaml --kube-context $(K8S_CONTEXT)
               - task: Bash@3
                 displayName: Verify Deployment
                 inputs:
