@@ -3,7 +3,7 @@ package {{GROUP_ID}}.service;
 import org.springframework.stereotype.Service;
 
 /**
- * Sample service for {{PROJECT_NAME}}.
+ * Sample service for {{OB_PROJECT_NAME}}.
  */
 @Service
 public class HelloService {
@@ -15,6 +15,6 @@ public class HelloService {
      * @return Greeting message
      */
     public String greet(String name) {
-        return String.format("Hello, %s! Welcome to {{PROJECT_NAME}}", name);
+        return String.format("Hello, %s! Welcome to {{OB_PROJECT_NAME}}", name);
     }
 }

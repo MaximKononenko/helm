@@ -1,4 +1,4 @@
-# Detekt Configuration for {{PROJECT_NAME}}
+# Detekt Configuration for {{OB_PROJECT_NAME}}
 # https://detekt.dev/docs/introduction/configurations
 
 build:

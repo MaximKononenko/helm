@@ -1,5 +1,5 @@
 """
-{{PROJECT_NAME}} - Health Check Tests
+{{OB_PROJECT_NAME}} - Health Check Tests
 
 Unit tests for health and readiness endpoints.
 """

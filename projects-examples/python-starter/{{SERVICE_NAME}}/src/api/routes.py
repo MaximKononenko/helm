@@ -1,5 +1,5 @@
 """
-{{PROJECT_NAME}} - API Routes
+{{OB_PROJECT_NAME}} - API Routes
 
 Define all API endpoints here.
 """
@@ -18,7 +18,7 @@ async def root():
         dict: Welcome message.
     """
     return {
-        "message": "Welcome to {{PROJECT_NAME}}",
+        "message": "Welcome to {{OB_PROJECT_NAME}}",
         "docs": "/docs",
     }
 
@@ -32,7 +32,7 @@ async def info():
         dict: Service metadata.
     """
     return {
-        "service": "{{PROJECT_NAME}}",
+        "service": "{{OB_PROJECT_NAME}}",
         "owner": "{{OWNER}}",
         "python_version": "{{PYTHON_VERSION}}",
     }

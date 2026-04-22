@@ -49,7 +49,7 @@ fun Route.healthRoutes() {
         
         call.respond(mapOf(
             "status" to "healthy",
-            "service" to "{{PROJECT_NAME}}",
+            "service" to "{{OB_PROJECT_NAME}}",
             "version" to "0.0.1",
             "uptime" to "${uptime.seconds}s",
             "startedAt" to startupTime.toString(),

@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * Sample REST controller for {{PROJECT_NAME}}.
+ * Sample REST controller for {{OB_PROJECT_NAME}}.
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -34,7 +34,7 @@ public class HelloController {
         
         return ResponseEntity.ok(Map.of(
             "message", helloService.greet(name),
-            "service", "{{PROJECT_NAME}}",
+            "service", "{{OB_PROJECT_NAME}}",
             "timestamp", System.currentTimeMillis()
         ));
     }

@@ -1,5 +1,5 @@
 """
-{{PROJECT_NAME}} - FastAPI Application Entry Point
+{{OB_PROJECT_NAME}} - FastAPI Application Entry Point
 
 {{DESCRIPTION}}
 """

@@ -78,3 +78,87 @@ spec:
     - allowed: true
       feature: manage_events
       target: all
+    # Self-service portal
+    - allowed: true
+      feature: view_self_service
+      target: all
+    - allowed: true
+      feature: edit_self_service
+      target: all
+    # Application project permissions
+    - allowed: true
+      feature: create_application_projects
+      target: all
+    - allowed: true
+      feature: view_application_projects
+      target: all
+    - allowed: true
+      feature: view_all_application_projects
+      target: all
+    - allowed: true
+      feature: edit_application_projects
+      target: all
+    - allowed: true
+      feature: edit_all_application_projects
+      target: all
+    - allowed: true
+      feature: delete_application_projects
+      target: all
+    - allowed: true
+      feature: delete_all_application_projects
+      target: all
+    # Template permissions
+    - allowed: true
+      feature: view_templates
+      target: all
+    - allowed: true
+      feature: create_templates
+      target: all
+    # Infrastructure project permissions
+    - allowed: true
+      feature: view_infrastructure_projects
+      target: all
+    - allowed: true
+      feature: view_all_infrastructure_projects
+      target: all
+    - allowed: true
+      feature: create_infrastructure_project
+      target: all
+    - allowed: true
+      feature: edit_infrastructure_project
+      target: all
+    - allowed: true
+      feature: edit_all_infrastructure_projects
+      target: all
+    - allowed: true
+      feature: delete_infrastructure_project
+      target: all
+    - allowed: true
+      feature: delete_all_infrastructure_projects
+      target: all
+    - allowed: true
+      feature: view_infrastructure_environments
+      target: all
+    # Infrastructure approvals
+    - allowed: true
+      feature: view_infrastructure_approvals
+      target: all
+    - allowed: true
+      feature: approve_infrastructure_request
+      target: all
+    - allowed: true
+      feature: reject_infrastructure_request
+      target: all
+    # IAC Manager
+    - allowed: true
+      feature: view_infrastructure_destinations
+      target: all
+    - allowed: true
+      feature: edit_infrastructure_destinations
+      target: all
+    - allowed: true
+      feature: delete_infrastructure_destinations
+      target: all
+    - allowed: true
+      feature: commit_infrastructure_configs
+      target: all

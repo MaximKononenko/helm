@@ -1,6 +1,6 @@
 /**
  * Error Handling Middleware
- * {{PROJECT_NAME}}
+ * {{OB_PROJECT_NAME}}
  * 
  * Centralized error handling for the application.
  */

@@ -1,5 +1,5 @@
 """
-{{PROJECT_NAME}} - Application Configuration
+{{OB_PROJECT_NAME}} - Application Configuration
 
 Configuration management using Pydantic Settings.
 Environment variables take precedence over defaults.
@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     """
     
     # Project Information
-    PROJECT_NAME: str = "{{PROJECT_NAME}}"
+    PROJECT_NAME: str = "{{OB_PROJECT_NAME}}"
     PROJECT_DESCRIPTION: str = "{{DESCRIPTION}}"
     VERSION: str = "1.0.0"
     

@@ -1,4 +1,4 @@
-# {{PROJECT_NAME}}
+# {{OB_PROJECT_NAME}}
 
 {{DESCRIPTION}}
 
@@ -21,7 +21,7 @@
 
 ```bash
 git clone <repository-url>
-cd {{PROJECT_NAME}}
+cd {{OB_PROJECT_NAME}}
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -44,8 +44,8 @@ pytest tests/ -v
 ### Build Docker Image
 
 ```bash
-docker build -t {{PROJECT_NAME}} .
-docker run -p {{PORT}}:{{PORT}} {{PROJECT_NAME}}
+docker build -t {{OB_PROJECT_NAME}} .
+docker run -p {{PORT}}:{{PORT}} {{OB_PROJECT_NAME}}
 ```
 
 ## API Documentation
@@ -63,7 +63,7 @@ curl http://localhost:{{PORT}}/health
 ## Project Structure
 
 ```
-{{PROJECT_NAME}}/
+{{OB_PROJECT_NAME}}/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py           # FastAPI application entry point

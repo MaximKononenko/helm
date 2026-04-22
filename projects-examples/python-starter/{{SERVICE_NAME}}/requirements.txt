@@ -1,4 +1,4 @@
-# {{PROJECT_NAME}} - Python Dependencies
+# {{OB_PROJECT_NAME}} - Python Dependencies
 # Python Version: {{PYTHON_VERSION}}
 
 # Web Framework

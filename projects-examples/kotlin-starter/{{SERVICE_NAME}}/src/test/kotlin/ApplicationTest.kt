@@ -7,7 +7,7 @@ import io.ktor.server.testing.*
 import kotlin.test.*
 
 /**
- * Application tests for {{PROJECT_NAME}}.
+ * Application tests for {{OB_PROJECT_NAME}}.
  */
 class ApplicationTest {
 
@@ -19,7 +19,7 @@ class ApplicationTest {
         
         client.get("/").apply {
             assertEquals(HttpStatusCode.OK, status)
-            assertTrue(bodyAsText().contains("{{PROJECT_NAME}}"))
+            assertTrue(bodyAsText().contains("{{OB_PROJECT_NAME}}"))
         }
     }
 

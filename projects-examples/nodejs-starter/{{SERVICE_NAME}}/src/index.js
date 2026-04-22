@@ -1,6 +1,6 @@
 /**
  * Application Entry Point
- * {{PROJECT_NAME}}
+ * {{OB_PROJECT_NAME}}
  * 
  * Starts the Express server and handles graceful shutdown.
  */

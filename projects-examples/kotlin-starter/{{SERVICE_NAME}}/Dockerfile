@@ -1,6 +1,6 @@
 # ============================================
 # Kotlin Microservice Dockerfile
-# Project: {{PROJECT_NAME}}
+# Project: {{OB_PROJECT_NAME}}
 # ============================================
 # Single-stage production image
 # Build happens in ADO workspace, this expects pre-built artifacts

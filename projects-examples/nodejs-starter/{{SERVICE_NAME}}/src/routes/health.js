@@ -1,6 +1,6 @@
 /**
  * Health Check Routes
- * {{PROJECT_NAME}}
+ * {{OB_PROJECT_NAME}}
  * 
  * Provides health check endpoints for Kubernetes probes.
  */
@@ -53,7 +53,7 @@ router.get('/health/details', (req, res) => {
   
   res.json({
     status: 'healthy',
-    service: '{{PROJECT_NAME}}',
+    service: '{{OB_PROJECT_NAME}}',
     version: '1.0.0',
     uptime: `${uptime}s`,
     startedAt: startupTime.toISOString(),

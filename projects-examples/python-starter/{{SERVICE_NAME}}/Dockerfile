@@ -1,4 +1,4 @@
-# {{PROJECT_NAME}} - Python {{PYTHON_VERSION}}
+# {{OB_PROJECT_NAME}} - Python {{PYTHON_VERSION}}
 #
 # Multi-stage build for production
 # Stage 1: Build dependencies
@@ -28,7 +28,7 @@ FROM catalina.azurecr.io/python:{{PYTHON_VERSION}}-slim as production
 
 # Labels
 LABEL maintainer="{{OWNER}}"
-LABEL service="{{PROJECT_NAME}}"
+LABEL service="{{OB_PROJECT_NAME}}"
 LABEL version="1.0.0"
 
 WORKDIR /app

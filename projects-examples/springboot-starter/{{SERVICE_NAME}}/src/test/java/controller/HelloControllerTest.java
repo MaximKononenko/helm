@@ -30,7 +30,7 @@ class HelloControllerTest {
         mockMvc.perform(get("/api/v1/hello"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.message").value("Hello, World!"))
-            .andExpect(jsonPath("$.service").value("{{PROJECT_NAME}}"));
+            .andExpect(jsonPath("$.service").value("{{OB_PROJECT_NAME}}"));
     }
 
     @Test

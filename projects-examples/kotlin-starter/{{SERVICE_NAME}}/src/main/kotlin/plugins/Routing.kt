@@ -18,7 +18,7 @@ import org.slf4j.event.Level
 fun Application.configureRouting() {
     // Default headers
     install(DefaultHeaders) {
-        header("X-Service-Name", "{{PROJECT_NAME}}")
+        header("X-Service-Name", "{{OB_PROJECT_NAME}}")
     }
     
     // Request logging
@@ -59,7 +59,7 @@ fun Application.configureRouting() {
         // Root endpoint
         get("/") {
             call.respond(mapOf(
-                "service" to "{{PROJECT_NAME}}",
+                "service" to "{{OB_PROJECT_NAME}}",
                 "version" to "0.0.1",
                 "status" to "running"
             ))

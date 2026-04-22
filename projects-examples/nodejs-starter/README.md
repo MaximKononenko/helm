@@ -1,4 +1,4 @@
-# {{PROJECT_NAME}}
+# {{OB_PROJECT_NAME}}
 
 {{DESCRIPTION}}
 
@@ -23,7 +23,7 @@
 
 ```bash
 git clone <repository-url>
-cd {{PROJECT_NAME}}
+cd {{OB_PROJECT_NAME}}
 {{PACKAGE_MANAGER}} install
 ```
 
@@ -61,7 +61,7 @@ The service will be available at `http://localhost:{{PORT}}`
 ## Project Structure
 
 ```
-{{PROJECT_NAME}}/
+{{OB_PROJECT_NAME}}/
 ├── src/
 │   ├── index.js          # Application entry point
 │   ├── app.js            # Express app configuration
@@ -84,13 +84,13 @@ The service will be available at `http://localhost:{{PORT}}`
 ### Build Image
 
 ```bash
-docker build -t {{PROJECT_NAME}}:latest .
+docker build -t {{OB_PROJECT_NAME}}:latest .
 ```
 
 ### Run Container
 
 ```bash
-docker run -p {{PORT}}:{{PORT}} {{PROJECT_NAME}}:latest
+docker run -p {{PORT}}:{{PORT}} {{OB_PROJECT_NAME}}:latest
 ```
 
 ## Environment Variables

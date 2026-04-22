@@ -1,1 +1,1 @@
-rootProject.name = "{{PROJECT_NAME}}"
+rootProject.name = "{{OB_PROJECT_NAME}}"

@@ -1,7 +1,7 @@
-# {{PROJECT_NAME}} - Python Project Configuration
+# {{OB_PROJECT_NAME}} - Python Project Configuration
 
 [project]
-name = "{{PROJECT_NAME}}"
+name = "{{OB_PROJECT_NAME}}"
 version = "1.0.0"
 description = "{{DESCRIPTION}}"
 authors = [{name = "{{OWNER}}"}]

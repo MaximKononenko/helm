@@ -1,6 +1,6 @@
 /**
  * Route Aggregator
- * {{PROJECT_NAME}}
+ * {{OB_PROJECT_NAME}}
  * 
  * Combines all route modules.
  */
@@ -16,7 +16,7 @@ router.use('/', healthRoutes);
 // API v1 routes
 router.get('/api/v1/hello', (req, res) => {
   res.json({
-    message: 'Hello from {{PROJECT_NAME}}!',
+    message: 'Hello from {{OB_PROJECT_NAME}}!',
     timestamp: new Date().toISOString(),
     requestId: req.id
   });
@@ -25,7 +25,7 @@ router.get('/api/v1/hello', (req, res) => {
 // Root endpoint
 router.get('/', (req, res) => {
   res.json({
-    service: '{{PROJECT_NAME}}',
+    service: '{{OB_PROJECT_NAME}}',
     version: '1.0.0',
     status: 'running',
     documentation: '/api/v1'

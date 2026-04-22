@@ -1,6 +1,6 @@
 /**
  * Application Tests
- * {{PROJECT_NAME}}
+ * {{OB_PROJECT_NAME}}
  * 
  * Unit tests for the Express application.
  */
@@ -8,7 +8,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 
-describe('{{PROJECT_NAME}} API', () => {
+describe('{{OB_PROJECT_NAME}} API', () => {
   
   describe('GET /health', () => {
     it('should return healthy status', async () => {
@@ -41,7 +41,7 @@ describe('{{PROJECT_NAME}} API', () => {
         .expect(200);
 
       expect(response.body).toHaveProperty('status', 'healthy');
-      expect(response.body).toHaveProperty('service', '{{PROJECT_NAME}}');
+      expect(response.body).toHaveProperty('service', '{{OB_PROJECT_NAME}}');
       expect(response.body).toHaveProperty('uptime');
       expect(response.body).toHaveProperty('memory');
     });
@@ -54,7 +54,7 @@ describe('{{PROJECT_NAME}} API', () => {
         .expect('Content-Type', /json/)
         .expect(200);
 
-      expect(response.body).toHaveProperty('service', '{{PROJECT_NAME}}');
+      expect(response.body).toHaveProperty('service', '{{OB_PROJECT_NAME}}');
       expect(response.body).toHaveProperty('status', 'running');
     });
   });
@@ -67,7 +67,7 @@ describe('{{PROJECT_NAME}} API', () => {
         .expect(200);
 
       expect(response.body).toHaveProperty('message');
-      expect(response.body.message).toContain('{{PROJECT_NAME}}');
+      expect(response.body.message).toContain('{{OB_PROJECT_NAME}}');
       expect(response.body).toHaveProperty('timestamp');
     });
   });

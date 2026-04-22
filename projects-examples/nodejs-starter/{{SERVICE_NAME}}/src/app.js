@@ -1,6 +1,6 @@
 /**
  * Express Application Configuration
- * {{PROJECT_NAME}}
+ * {{OB_PROJECT_NAME}}
  * 
  * Sets up Express with middleware and routes.
  */

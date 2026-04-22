@@ -1,4 +1,4 @@
-# {{PROJECT_NAME}} - Git Ignore
+# {{OB_PROJECT_NAME}} - Git Ignore
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

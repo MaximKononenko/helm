@@ -12,9 +12,9 @@
     </parent>
     
     <groupId>{{GROUP_ID}}</groupId>
-    <artifactId>{{PROJECT_NAME}}</artifactId>
+    <artifactId>{{OB_PROJECT_NAME}}</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>{{PROJECT_NAME}}</name>
+    <name>{{OB_PROJECT_NAME}}</name>
     <description>{{DESCRIPTION}}</description>
     
     <properties>

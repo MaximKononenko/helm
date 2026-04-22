@@ -1,4 +1,4 @@
-# {{PROJECT_NAME}}
+# {{OB_PROJECT_NAME}}
 
 {{DESCRIPTION}}
 
@@ -24,7 +24,7 @@
 
 ```bash
 git clone <repository-url>
-cd {{PROJECT_NAME}}
+cd {{OB_PROJECT_NAME}}
 ./gradlew build
 ```
 
@@ -35,7 +35,7 @@ cd {{PROJECT_NAME}}
 ./gradlew run
 
 # Or run the shadow JAR directly
-java -jar build/libs/{{PROJECT_NAME}}-all.jar
+java -jar build/libs/{{OB_PROJECT_NAME}}-all.jar
 ```
 
 The service will be available at `http://localhost:{{PORT}}`
@@ -64,7 +64,7 @@ The service will be available at `http://localhost:{{PORT}}`
 ## Project Structure
 
 ```
-{{PROJECT_NAME}}/
+{{OB_PROJECT_NAME}}/
 ├── src/
 │   ├── main/
 │   │   ├── kotlin/{{PACKAGE_PATH}}/
@@ -94,13 +94,13 @@ The service will be available at `http://localhost:{{PORT}}`
 ### Build Image
 
 ```bash
-docker build -t {{PROJECT_NAME}}:latest .
+docker build -t {{OB_PROJECT_NAME}}:latest .
 ```
 
 ### Run Container
 
 ```bash
-docker run -p {{PORT}}:{{PORT}} {{PROJECT_NAME}}:latest
+docker run -p {{PORT}}:{{PORT}} {{OB_PROJECT_NAME}}:latest
 ```
 
 ## Environment Variables

@@ -1,6 +1,6 @@
 /**
  * Application Configuration
- * {{PROJECT_NAME}}
+ * {{OB_PROJECT_NAME}}
  * 
  * Loads configuration from environment variables.
  */
@@ -9,7 +9,7 @@ require('dotenv').config();
 
 const config = {
   // Service identity
-  serviceName: process.env.SERVICE_NAME || '{{PROJECT_NAME}}',
+  serviceName: process.env.SERVICE_NAME || '{{OB_PROJECT_NAME}}',
   
   // Environment
   nodeEnv: process.env.NODE_ENV || 'development',

@@ -14,8 +14,8 @@ fun Route.helloRoutes() {
             val name = call.request.queryParameters["name"] ?: "World"
             
             call.respond(mapOf(
-                "message" to "Hello, $name! Welcome to {{PROJECT_NAME}}",
-                "service" to "{{PROJECT_NAME}}",
+                "message" to "Hello, $name! Welcome to {{OB_PROJECT_NAME}}",
+                "service" to "{{OB_PROJECT_NAME}}",
                 "timestamp" to Instant.now().toString()
             ))
         }

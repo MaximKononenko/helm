@@ -1,6 +1,6 @@
 # ============================================
 # Spring Boot Microservice Dockerfile
-# Project: {{PROJECT_NAME}}
+# Project: {{OB_PROJECT_NAME}}
 # ============================================
 # Production image - expects pre-built artifacts from Maven build in ADO pipeline
 

@@ -1,0 +1,48 @@
+apiVersion: ops-box.io/v1
+kind: CronDefinition
+metadata:
+  name: dora-data-cleanup
+  namespace: ops-box
+spec:
+  jobType: custom
+  schedule: "0 2 * * *"
+  namespace: ops-box
+  customJob:
+    image: catalina.azurecr.io/ops-box/services-dora-collector:v5.1.0
+    command: ["python", "-m", "dora_collector"]
+    args: ["--cleanup"]
+    env:
+      - name: POSTGRES_HOST
+        value: "ops-box-postgres"
+      - name: POSTGRES_PORT
+        value: "5432"
+      - name: POSTGRES_DB
+        value: "opsbox_dora"
+      - name: POSTGRES_USER
+        valueFrom:
+          secretKeyRef:
+            name: k8s-ops-box-secrets
+            key: postgresUser
+      - name: POSTGRES_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: k8s-ops-box-secrets
+            key: postgresPassword
+      - name: DORA_RAW_RETENTION_DAYS
+        value: "90"
+      - name: DORA_DAILY_RETENTION_DAYS
+        value: "730"
+  jobConfig:
+    concurrencyPolicy: Forbid
+    backoffLimit: 1
+    activeDeadlineSeconds: 300
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+  reconciliation:
+    selfHeal: true
+    prune: true

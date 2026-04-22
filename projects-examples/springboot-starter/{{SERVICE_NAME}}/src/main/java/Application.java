@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * Main application entry point for {{PROJECT_NAME}}.
+ * Main application entry point for {{OB_PROJECT_NAME}}.
  * 
  * @author {{OWNER}}
  */

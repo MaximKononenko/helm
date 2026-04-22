@@ -1,6 +1,6 @@
 # ============================================
 # Node.js Microservice Dockerfile
-# Project: {{PROJECT_NAME}}
+# Project: {{OB_PROJECT_NAME}}
 # ============================================
 # Multi-stage build for optimized production image
 

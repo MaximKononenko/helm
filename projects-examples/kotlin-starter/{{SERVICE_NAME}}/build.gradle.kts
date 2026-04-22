@@ -49,7 +49,7 @@ kotlin {
 
 ktor {
     fatJar {
-        archiveFileName.set("{{PROJECT_NAME}}-all.jar")
+        archiveFileName.set("{{OB_PROJECT_NAME}}-all.jar")
     }
 }
 

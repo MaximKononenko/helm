@@ -7,7 +7,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 
 /**
- * Main application entry point for {{PROJECT_NAME}}.
+ * Main application entry point for {{OB_PROJECT_NAME}}.
  */
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: {{PORT}}
@@ -23,5 +23,5 @@ fun Application.module() {
     configureSerialization()
     configureRouting()
     
-    log.info("{{PROJECT_NAME}} started on port ${environment.config.propertyOrNull("ktor.deployment.port")?.getString() ?: "{{PORT}}"}")
+    log.info("{{OB_PROJECT_NAME}} started on port ${environment.config.propertyOrNull("ktor.deployment.port")?.getString() ?: "{{PORT}}"}")
 }
