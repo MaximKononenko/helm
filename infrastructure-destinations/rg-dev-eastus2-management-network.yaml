@@ -1,0 +1,37 @@
+apiVersion: ops-box.io/v1
+kind: InfrastructureDestination
+metadata:
+  name: rg-dev-eastus2-management-network
+  labels:
+    ops-box.io/organization: catalinamarketing
+    ops-box.io/environment: dev
+    ops-box.io/region: eastus2
+spec:
+  organization: catalinamarketing
+  adoProject: DeliveryEngineering
+  environment: dev
+  region: eastus2
+  displayName: rg-dev-eastus2-management-network
+  description: rg-dev-eastus2-management-network
+  azure:
+    subscriptionId: d37438af-d6dd-4116-b999-3a62087075d4
+    resourceGroup: rg-dev-eastus2-management-network
+    tenantId: 2eddc39c-2996-4c2a-ab97-f767c39ea155
+  networking:
+    vnetName: vn-dev-eastus2-ops-box-10-141-94-0-24
+    subnetName: sn-dev-eastus2-management-10-141-94-32-27-aks
+    vnetResourceGroup: rg-dev-eastus2-management-network
+  quotas:
+    maxAKSClusters: 2
+    maxKeyVaults: 1
+    maxManagedIdentities: 20
+    maxStorageAccounts: 5
+    maxTotalResources: 13
+    maxVMs: 10
+  allowedResources:
+    aksClusters: true
+    keyVaults: true
+    managedIdentities: true
+    storageAccounts: true
+    virtualMachines: true
+  targetCluster: null
