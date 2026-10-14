@@ -1,0 +1,29 @@
+versions:
+  terraform: 1.1.6
+  aws: 5
+components:
+- component_name: w2e2e-bucket
+  component_type: aws_s3_bucket
+  acl: private
+  website: false
+  lifecycle_rules: []
+  bucket_policies: []
+  tags:
+    delivery_team: devops
+    product: devops-dev
+    role: web
+- component_name: w2e2e-ec2
+  component_type: aws_instance
+  instance_type: t3.small
+  ami: ami-084568db4383264d4
+  subnet_id: subnet-0a7dcd6c6867b41fa
+  key_name: kp-devops-dev
+  associate_public_ip_address: false
+  vpc_security_group_ids_internal_ref: []
+  prevent_destroy: false
+  data_ebs_size: 0
+  root_block_device: {}
+  tags:
+    delivery_team: devops
+    product: devops-dev
+    role: web
