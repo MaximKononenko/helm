@@ -1,0 +1,12 @@
+versions:
+  terraform: 1.1.6
+  aws: 5
+components:
+- component_name: '1'
+  component_type: aws_instance
+  instance_type: t3.medium
+  key_name: kp-devops-dev
+  prevent_destroy: true
+  tags:
+    delivery_team: devops
+    product: devops-dev
